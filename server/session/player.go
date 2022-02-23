@@ -3,6 +3,12 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"net"
+	"time"
+	_ "unsafe" // Imported for compiler directives.
+
+	"github.com/DEBANMC/dragonfly/server/item/recipe"
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/entity"
@@ -11,7 +17,6 @@ import (
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/item/creative"
 	"github.com/df-mc/dragonfly/server/item/inventory"
-	"github.com/df-mc/dragonfly/server/item/recipe"
 	"github.com/df-mc/dragonfly/server/player/form"
 	"github.com/df-mc/dragonfly/server/player/skin"
 	"github.com/df-mc/dragonfly/server/world"
@@ -20,10 +25,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"go.uber.org/atomic"
-	"math"
-	"net"
-	"time"
-	_ "unsafe" // Imported for compiler directives.
 )
 
 // StopShowingEntity stops showing a world.Entity to the Session. It will be completely invisible until a call to

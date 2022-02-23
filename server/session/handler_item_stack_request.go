@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/DEBANMC/dragonfly/server/item/recipe"
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/entity/effect"
@@ -12,7 +13,6 @@ import (
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/item/creative"
 	"github.com/df-mc/dragonfly/server/item/inventory"
-	"github.com/df-mc/dragonfly/server/item/recipe"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 )
