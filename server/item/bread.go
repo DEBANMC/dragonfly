@@ -1,6 +1,6 @@
 package item
 
-import "github.com/df-mc/dragonfly/server/world"
+import "github.com/DEBANMC/dragonfly/server/world"
 
 // Bread is a food item that can be eaten by the player.
 type Bread struct {

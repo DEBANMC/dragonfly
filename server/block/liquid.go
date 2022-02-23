@@ -1,15 +1,16 @@
 package block
 
 import (
-	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/entity"
-	"github.com/df-mc/dragonfly/server/event"
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/world"
-	"github.com/go-gl/mathgl/mgl64"
 	"math"
 	"math/rand"
 	"sync"
+
+	"github.com/DEBANMC/dragonfly/server/block/cube"
+	"github.com/DEBANMC/dragonfly/server/entity"
+	"github.com/DEBANMC/dragonfly/server/event"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/world"
+	"github.com/go-gl/mathgl/mgl64"
 )
 
 // LiquidRemovable represents a block that may be removed by a liquid flowing into it. When this happens, the

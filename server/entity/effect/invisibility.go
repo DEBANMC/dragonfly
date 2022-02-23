@@ -1,8 +1,9 @@
 package effect
 
 import (
-	"github.com/df-mc/dragonfly/server/world"
 	"image/color"
+
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // Invisibility is a lasting effect that causes the affected entity to turn invisible. While invisible, the

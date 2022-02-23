@@ -2,7 +2,8 @@ package chunk
 
 import (
 	"container/list"
-	"github.com/df-mc/dragonfly/server/block/cube"
+
+	"github.com/DEBANMC/dragonfly/server/block/cube"
 )
 
 // insertBlockLightNodes iterates over the chunk and looks for blocks that have a light level of at least 1.

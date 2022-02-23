@@ -1,7 +1,7 @@
 package enchantment
 
 import (
-	"github.com/df-mc/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/item"
 )
 
 // Efficiency is an enchantment that increases mining speed.

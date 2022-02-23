@@ -1,9 +1,9 @@
 package model
 
 import (
-	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/entity/physics"
-	"github.com/df-mc/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/block/cube"
+	"github.com/DEBANMC/dragonfly/server/entity/physics"
+	"github.com/DEBANMC/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl64"
 )
 

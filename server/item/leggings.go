@@ -1,7 +1,7 @@
 package item
 
 import (
-	"github.com/df-mc/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // Leggings are a defensive item that may be equipped in the leggings armour slot. They come in several tiers,

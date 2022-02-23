@@ -1,7 +1,7 @@
 package block
 
 import (
-	"github.com/df-mc/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/item"
 )
 
 // LapisBlock is a decorative mineral block that is crafted from lapis lazuli.

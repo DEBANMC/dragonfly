@@ -1,9 +1,9 @@
 package block
 
 import (
-	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/block/cube"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // StainedGlassPane is a transparent block that can be used as a more efficient alternative to glass blocks.

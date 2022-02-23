@@ -1,7 +1,7 @@
 package item
 
 import (
-	"github.com/df-mc/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // Sword is a tool generally used to attack enemies. In addition, it may be used to mine any block slightly

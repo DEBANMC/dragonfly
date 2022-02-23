@@ -1,8 +1,8 @@
 package block
 
 import (
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // StainedGlass is a decorative, fully transparent solid block that is dyed into a different colour.

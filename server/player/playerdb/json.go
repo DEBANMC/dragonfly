@@ -1,10 +1,11 @@
 package playerdb
 
 import (
-	"github.com/df-mc/dragonfly/server/player"
+	"time"
+
+	"github.com/DEBANMC/dragonfly/server/player"
 	"github.com/go-gl/mathgl/mgl64"
 	"github.com/google/uuid"
-	"time"
 )
 
 func fromJson(d jsonData) player.Data {

@@ -1,10 +1,10 @@
 package entity
 
 import (
-	"github.com/df-mc/dragonfly/server/entity/damage"
-	"github.com/df-mc/dragonfly/server/entity/effect"
-	"github.com/df-mc/dragonfly/server/entity/healing"
-	"github.com/df-mc/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/entity/damage"
+	"github.com/DEBANMC/dragonfly/server/entity/effect"
+	"github.com/DEBANMC/dragonfly/server/entity/healing"
+	"github.com/DEBANMC/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl64"
 )
 

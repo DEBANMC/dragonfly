@@ -1,15 +1,16 @@
 package block
 
 import (
-	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/block/model"
-	"github.com/df-mc/dragonfly/server/entity"
-	"github.com/df-mc/dragonfly/server/internal/nbtconv"
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/world"
-	"github.com/df-mc/dragonfly/server/world/sound"
-	"github.com/go-gl/mathgl/mgl64"
 	"math/rand"
+
+	"github.com/DEBANMC/dragonfly/server/block/cube"
+	"github.com/DEBANMC/dragonfly/server/block/model"
+	"github.com/DEBANMC/dragonfly/server/entity"
+	"github.com/DEBANMC/dragonfly/server/internal/nbtconv"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/world/sound"
+	"github.com/go-gl/mathgl/mgl64"
 )
 
 // ItemFrame is a block entity that displays the item or block that is inside it.

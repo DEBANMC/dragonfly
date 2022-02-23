@@ -1,8 +1,8 @@
 package block
 
 import (
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/world/sound"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/world/sound"
 )
 
 // IronBlock is a precious metal block made from 9 iron ingots.

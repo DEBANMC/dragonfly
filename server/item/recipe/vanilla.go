@@ -2,10 +2,11 @@ package recipe
 
 import (
 	// Insure all blocks and items are registered before trying to load vanilla recipes.
-	_ "github.com/df-mc/dragonfly/server/block"
-	_ "github.com/df-mc/dragonfly/server/item"
+	_ "github.com/DEBANMC/dragonfly/server/block"
+	_ "github.com/DEBANMC/dragonfly/server/item"
 
 	_ "embed"
+
 	"github.com/sandertv/gophertunnel/minecraft/nbt"
 )
 

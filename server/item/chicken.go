@@ -1,10 +1,11 @@
 package item
 
 import (
-	"github.com/df-mc/dragonfly/server/entity/effect"
-	"github.com/df-mc/dragonfly/server/world"
 	"math/rand"
 	"time"
+
+	"github.com/DEBANMC/dragonfly/server/entity/effect"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // Chicken is a food item obtained from chickens. It can be cooked in a furnace, smoker, or campfire.

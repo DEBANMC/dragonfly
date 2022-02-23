@@ -3,11 +3,12 @@ package creative
 import (
 	_ "embed"
 	"encoding/base64"
+
 	// The following three imports are essential for this package: They make sure this package is loaded after
 	// all these imports. This ensures that all items are registered before the creative items are registered
 	// in the init function in this package.
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/world"
 	"github.com/sandertv/gophertunnel/minecraft/nbt"
 )
 

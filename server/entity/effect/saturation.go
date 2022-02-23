@@ -1,9 +1,10 @@
 package effect
 
 import (
-	"github.com/df-mc/dragonfly/server/world"
 	"image/color"
 	"time"
+
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // Saturation is a lasting effect that causes the affected player to regain food and saturation.

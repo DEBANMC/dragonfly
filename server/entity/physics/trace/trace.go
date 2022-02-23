@@ -1,10 +1,11 @@
 package trace
 
 import (
-	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/world"
-	"github.com/go-gl/mathgl/mgl64"
 	"math"
+
+	"github.com/DEBANMC/dragonfly/server/block/cube"
+	"github.com/DEBANMC/dragonfly/server/world"
+	"github.com/go-gl/mathgl/mgl64"
 )
 
 // TraverseBlocks performs a ray trace between the start and end coordinates.

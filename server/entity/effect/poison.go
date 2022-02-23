@@ -1,10 +1,11 @@
 package effect
 
 import (
-	"github.com/df-mc/dragonfly/server/entity/damage"
-	"github.com/df-mc/dragonfly/server/world"
 	"image/color"
 	"time"
+
+	"github.com/DEBANMC/dragonfly/server/entity/damage"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // Poison is a lasting effect that causes the affected entity to lose health gradually. Poison cannot kill,

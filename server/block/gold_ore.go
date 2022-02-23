@@ -1,7 +1,7 @@
 package block
 
 import (
-	"github.com/df-mc/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/item"
 )
 
 // GoldOre is a rare mineral block found underground.

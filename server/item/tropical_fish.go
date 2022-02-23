@@ -1,6 +1,6 @@
 package item
 
-import "github.com/df-mc/dragonfly/server/world"
+import "github.com/DEBANMC/dragonfly/server/world"
 
 // TropicalFish is a food item that cannot be cooked.
 type TropicalFish struct {

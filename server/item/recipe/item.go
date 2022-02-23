@@ -1,9 +1,10 @@
 package recipe
 
 import (
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/world"
 	"math"
+
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // InputItem is a recipe item. It is an item stack inherently, but it also has an extra value for if it applies to all types.

@@ -3,10 +3,10 @@ package block
 import (
 	"math/rand"
 
-	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/world"
-	"github.com/df-mc/dragonfly/server/world/particle"
+	"github.com/DEBANMC/dragonfly/server/block/cube"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/world/particle"
 )
 
 // DragonEgg is a decorative block or a "trophy item", and the rarest item in the game.

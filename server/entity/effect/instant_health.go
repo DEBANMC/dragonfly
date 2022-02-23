@@ -1,10 +1,11 @@
 package effect
 
 import (
-	"github.com/df-mc/dragonfly/server/entity/healing"
-	"github.com/df-mc/dragonfly/server/world"
 	"image/color"
 	"time"
+
+	"github.com/DEBANMC/dragonfly/server/entity/healing"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // InstantHealth is an instant effect that causes the player that it is applied to immediately regain some

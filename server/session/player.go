@@ -3,27 +3,28 @@ package session
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/df-mc/dragonfly/server/block"
-	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/entity"
-	"github.com/df-mc/dragonfly/server/entity/effect"
-	"github.com/df-mc/dragonfly/server/internal/nbtconv"
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/item/creative"
-	"github.com/df-mc/dragonfly/server/item/inventory"
-	"github.com/df-mc/dragonfly/server/item/recipe"
-	"github.com/df-mc/dragonfly/server/player/form"
-	"github.com/df-mc/dragonfly/server/player/skin"
-	"github.com/df-mc/dragonfly/server/world"
+	"math"
+	"net"
+	"time"
+	_ "unsafe" // Imported for compiler directives.
+
+	"github.com/DEBANMC/dragonfly/server/block"
+	"github.com/DEBANMC/dragonfly/server/block/cube"
+	"github.com/DEBANMC/dragonfly/server/entity"
+	"github.com/DEBANMC/dragonfly/server/entity/effect"
+	"github.com/DEBANMC/dragonfly/server/internal/nbtconv"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/item/creative"
+	"github.com/DEBANMC/dragonfly/server/item/inventory"
+	"github.com/DEBANMC/dragonfly/server/item/recipe"
+	"github.com/DEBANMC/dragonfly/server/player/form"
+	"github.com/DEBANMC/dragonfly/server/player/skin"
+	"github.com/DEBANMC/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl64"
 	"github.com/google/uuid"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"go.uber.org/atomic"
-	"math"
-	"net"
-	"time"
-	_ "unsafe" // Imported for compiler directives.
 )
 
 // StopShowingEntity stops showing a world.Entity to the Session. It will be completely invisible until a call to
@@ -729,6 +730,6 @@ func protocolToSkin(sk protocol.Skin) (s skin.Skin, err error) {
 // The following functions use the go:linkname directive in order to make sure the item.byID and item.toID
 // functions do not need to be exported.
 
-//go:linkname item_id github.com/df-mc/dragonfly/server/item.id
+//go:linkname item_id github.com/DEBANMC/dragonfly/server/item.id
 //noinspection ALL
 func item_id(s item.Stack) int32

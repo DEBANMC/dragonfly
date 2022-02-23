@@ -1,8 +1,8 @@
 package inventory
 
 import (
-	"github.com/df-mc/dragonfly/server/event"
-	"github.com/df-mc/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/event"
+	"github.com/DEBANMC/dragonfly/server/item"
 )
 
 // Handler is a type that may be used to handle actions performed on an inventory by a player.

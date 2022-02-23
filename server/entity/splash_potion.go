@@ -1,18 +1,19 @@
 package entity
 
 import (
-	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/entity/effect"
-	"github.com/df-mc/dragonfly/server/entity/physics"
-	"github.com/df-mc/dragonfly/server/entity/physics/trace"
-	"github.com/df-mc/dragonfly/server/internal/nbtconv"
-	"github.com/df-mc/dragonfly/server/item/potion"
-	"github.com/df-mc/dragonfly/server/world"
-	"github.com/df-mc/dragonfly/server/world/particle"
-	"github.com/df-mc/dragonfly/server/world/sound"
-	"github.com/go-gl/mathgl/mgl64"
 	"image/color"
 	"time"
+
+	"github.com/DEBANMC/dragonfly/server/block/cube"
+	"github.com/DEBANMC/dragonfly/server/entity/effect"
+	"github.com/DEBANMC/dragonfly/server/entity/physics"
+	"github.com/DEBANMC/dragonfly/server/entity/physics/trace"
+	"github.com/DEBANMC/dragonfly/server/internal/nbtconv"
+	"github.com/DEBANMC/dragonfly/server/item/potion"
+	"github.com/DEBANMC/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/world/particle"
+	"github.com/DEBANMC/dragonfly/server/world/sound"
+	"github.com/go-gl/mathgl/mgl64"
 )
 
 // SplashPotion is an item that grants effects when thrown.

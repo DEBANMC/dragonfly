@@ -1,9 +1,10 @@
 package effect
 
 import (
-	"github.com/df-mc/dragonfly/server/entity/damage"
-	"github.com/df-mc/dragonfly/server/world"
 	"image/color"
+
+	"github.com/DEBANMC/dragonfly/server/entity/damage"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // Absorption is a lasting effect that increases the health of an entity over the maximum. Once this extra

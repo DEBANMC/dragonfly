@@ -2,13 +2,14 @@ package entity
 
 import (
 	"fmt"
-	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/entity/physics"
-	"github.com/df-mc/dragonfly/server/internal/nbtconv"
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/world"
-	"github.com/go-gl/mathgl/mgl64"
 	"math/rand"
+
+	"github.com/DEBANMC/dragonfly/server/block/cube"
+	"github.com/DEBANMC/dragonfly/server/entity/physics"
+	"github.com/DEBANMC/dragonfly/server/internal/nbtconv"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/world"
+	"github.com/go-gl/mathgl/mgl64"
 )
 
 // FallingBlock is the entity form of a block that appears when a gravity-affected block loses its support.

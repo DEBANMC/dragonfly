@@ -1,13 +1,13 @@
 package entity
 
 import (
-	"github.com/df-mc/dragonfly/server/entity/damage"
-	"github.com/df-mc/dragonfly/server/entity/physics"
-	"github.com/df-mc/dragonfly/server/entity/physics/trace"
-	"github.com/df-mc/dragonfly/server/internal/nbtconv"
-	"github.com/df-mc/dragonfly/server/world"
-	"github.com/df-mc/dragonfly/server/world/particle"
-	"github.com/df-mc/dragonfly/server/world/sound"
+	"github.com/DEBANMC/dragonfly/server/entity/damage"
+	"github.com/DEBANMC/dragonfly/server/entity/physics"
+	"github.com/DEBANMC/dragonfly/server/entity/physics/trace"
+	"github.com/DEBANMC/dragonfly/server/internal/nbtconv"
+	"github.com/DEBANMC/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/world/particle"
+	"github.com/DEBANMC/dragonfly/server/world/sound"
 	"github.com/go-gl/mathgl/mgl64"
 )
 

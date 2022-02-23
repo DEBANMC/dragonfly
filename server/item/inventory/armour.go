@@ -2,7 +2,8 @@ package inventory
 
 import (
 	"fmt"
-	"github.com/df-mc/dragonfly/server/item"
+
+	"github.com/DEBANMC/dragonfly/server/item"
 )
 
 // Armour represents an inventory for armour. It has 4 slots, one for a helmet, chestplate, leggings and

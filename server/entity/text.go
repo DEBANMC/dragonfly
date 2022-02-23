@@ -1,8 +1,8 @@
 package entity
 
 import (
-	"github.com/df-mc/dragonfly/server/entity/physics"
-	"github.com/df-mc/dragonfly/server/internal/nbtconv"
+	"github.com/DEBANMC/dragonfly/server/entity/physics"
+	"github.com/DEBANMC/dragonfly/server/internal/nbtconv"
 	"github.com/go-gl/mathgl/mgl64"
 )
 

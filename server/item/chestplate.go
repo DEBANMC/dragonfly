@@ -1,7 +1,7 @@
 package item
 
 import (
-	"github.com/df-mc/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // Chestplate is a defensive item that may be equipped in the chestplate slot. Generally, chestplates provide

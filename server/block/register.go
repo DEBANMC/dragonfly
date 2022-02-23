@@ -1,9 +1,9 @@
 package block
 
 import (
-	_ "github.com/df-mc/dragonfly/server/internal/block_internal"
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/world"
+	_ "github.com/DEBANMC/dragonfly/server/internal/block_internal"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 //go:generate go run ../../cmd/blockhash -o hash.go .

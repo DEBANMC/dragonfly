@@ -1,7 +1,7 @@
 package session
 
 import (
-	"github.com/df-mc/dragonfly/server/cmd"
+	"github.com/DEBANMC/dragonfly/server/cmd"
 	"github.com/go-gl/mathgl/mgl64"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"

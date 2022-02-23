@@ -1,9 +1,10 @@
 package item
 
 import (
-	"github.com/df-mc/dragonfly/server/entity/effect"
-	"github.com/df-mc/dragonfly/server/world"
 	"time"
+
+	"github.com/DEBANMC/dragonfly/server/entity/effect"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // EnchantedApple is a rare variant of the golden apple that has stronger effects.

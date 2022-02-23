@@ -1,6 +1,6 @@
 package block
 
-import "github.com/df-mc/dragonfly/server/world"
+import "github.com/DEBANMC/dragonfly/server/world"
 
 // Netherrack is a block found in The Nether.
 type Netherrack struct {

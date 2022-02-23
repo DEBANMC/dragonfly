@@ -1,8 +1,9 @@
 package enchantment
 
 import (
-	"github.com/df-mc/dragonfly/server/item"
 	"time"
+
+	"github.com/DEBANMC/dragonfly/server/item"
 )
 
 // FireAspect is a sword enchantment that sets the target on fire.

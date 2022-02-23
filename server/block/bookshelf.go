@@ -1,6 +1,6 @@
 package block
 
-import "github.com/df-mc/dragonfly/server/item"
+import "github.com/DEBANMC/dragonfly/server/item"
 
 // Bookshelf is a decorative block that primarily serves to enhance enchanting with an enchanting table.
 type Bookshelf struct {

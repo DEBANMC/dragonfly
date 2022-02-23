@@ -3,12 +3,13 @@ package block
 //lint:file-ignore ST1022 Exported variables in this package have compiler directives. These variables are not otherwise exposed to users.
 
 import (
-	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/entity"
-	"github.com/df-mc/dragonfly/server/entity/damage"
-	"github.com/df-mc/dragonfly/server/world"
 	"math/rand"
 	"time"
+
+	"github.com/DEBANMC/dragonfly/server/block/cube"
+	"github.com/DEBANMC/dragonfly/server/entity"
+	"github.com/DEBANMC/dragonfly/server/entity/damage"
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // Fire is a non-solid block that can spread to nearby flammable blocks.

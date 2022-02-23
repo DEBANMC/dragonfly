@@ -1,8 +1,9 @@
 package item
 
 import (
-	"github.com/df-mc/dragonfly/server/world"
 	"time"
+
+	"github.com/DEBANMC/dragonfly/server/world"
 )
 
 // MelonSlice is a food item dropped by melon blocks.

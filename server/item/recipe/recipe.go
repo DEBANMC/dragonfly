@@ -1,6 +1,6 @@
 package recipe
 
-import "github.com/df-mc/dragonfly/server/item"
+import "github.com/DEBANMC/dragonfly/server/item"
 
 // Recipe is implemented by all recipe types.
 type Recipe interface {

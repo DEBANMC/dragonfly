@@ -3,10 +3,11 @@ package session
 import (
 	"bytes"
 	"fmt"
-	"github.com/df-mc/dragonfly/server/player/form"
+	"sync"
+
+	"github.com/DEBANMC/dragonfly/server/player/form"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"go.uber.org/atomic"
-	"sync"
 )
 
 // ModalFormResponseHandler handles the ModalFormResponse packet.

@@ -1,7 +1,7 @@
 package enchantment
 
 import (
-	"github.com/df-mc/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/item"
 )
 
 // SilkTouch is an enchantment that allows many blocks to drop themselves instead of their usual items when mined.

@@ -1,6 +1,6 @@
 package block
 
-import "github.com/df-mc/dragonfly/server/world"
+import "github.com/DEBANMC/dragonfly/server/world"
 
 // NetherBricks are blocks used to form nether fortresses in the Nether.
 // Red Nether bricks, Cracked Nether bricks and Chiseled Nether bricks are decorative variants that do not naturally generate.

@@ -1,7 +1,7 @@
 package sound
 
 import (
-	"github.com/df-mc/dragonfly/server/world"
+	"github.com/DEBANMC/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl64"
 )
 

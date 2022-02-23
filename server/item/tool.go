@@ -1,6 +1,6 @@
 package item
 
-import "github.com/df-mc/dragonfly/server/world"
+import "github.com/DEBANMC/dragonfly/server/world"
 
 var (
 	// TypeNone is the ToolType of items that are not tools.

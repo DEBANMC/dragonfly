@@ -1,8 +1,9 @@
 package block
 
 import (
-	"github.com/df-mc/dragonfly/server/item"
 	"math/rand"
+
+	"github.com/DEBANMC/dragonfly/server/item"
 )
 
 // LapisOre is an ore block from which lapis lazuli is obtained.

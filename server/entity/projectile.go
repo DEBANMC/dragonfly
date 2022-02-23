@@ -1,10 +1,11 @@
 package entity
 
 import (
-	"github.com/df-mc/dragonfly/server/entity/physics/trace"
-	"github.com/df-mc/dragonfly/server/world"
-	"github.com/go-gl/mathgl/mgl64"
 	"math"
+
+	"github.com/DEBANMC/dragonfly/server/entity/physics/trace"
+	"github.com/DEBANMC/dragonfly/server/world"
+	"github.com/go-gl/mathgl/mgl64"
 )
 
 // Owned represents an entity that is "owned" by another entity. Entities like projectiles typically are "owned".

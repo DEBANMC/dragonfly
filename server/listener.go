@@ -1,9 +1,10 @@
 package server
 
 import (
-	"github.com/df-mc/dragonfly/server/session"
-	"github.com/sandertv/gophertunnel/minecraft"
 	"io"
+
+	"github.com/DEBANMC/dragonfly/server/session"
+	"github.com/sandertv/gophertunnel/minecraft"
 )
 
 // Listener is a source for connections that may be listened on by a Server using Server.Listen. Proxies can use this to

@@ -2,11 +2,12 @@ package playerdb
 
 import (
 	"encoding/json"
-	"github.com/df-mc/dragonfly/server/player"
+	"os"
+
+	"github.com/DEBANMC/dragonfly/server/player"
 	"github.com/df-mc/goleveldb/leveldb"
 	"github.com/df-mc/goleveldb/leveldb/opt"
 	"github.com/google/uuid"
-	"os"
 )
 
 // Provider is a player data provider that uses a LevelDB database to store data. The data passed on

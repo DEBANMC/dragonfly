@@ -2,9 +2,10 @@ package playerdb
 
 import (
 	"bytes"
-	"github.com/df-mc/dragonfly/server/internal/nbtconv"
-	"github.com/df-mc/dragonfly/server/item"
-	"github.com/df-mc/dragonfly/server/player"
+
+	"github.com/DEBANMC/dragonfly/server/internal/nbtconv"
+	"github.com/DEBANMC/dragonfly/server/item"
+	"github.com/DEBANMC/dragonfly/server/player"
 	"github.com/sandertv/gophertunnel/minecraft/nbt"
 )
 
