@@ -2,6 +2,9 @@ package session
 
 import (
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/entity/effect"
@@ -12,8 +15,6 @@ import (
 	"github.com/df-mc/dragonfly/server/item/recipe"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"math"
-	"time"
 )
 
 // ItemStackRequestHandler handles the ItemStackRequest packet. It handles the actions done within the
@@ -93,8 +94,8 @@ func (h *ItemStackRequestHandler) handleRequest(req protocol.ItemStackRequest, s
 		case *protocol.ConsumeStackRequestAction, *protocol.CraftResultsDeprecatedStackRequestAction:
 		case *protocol.MineBlockStackRequestAction:
 			err = h.handleMineBlock(a, s)
-		case *protocol.CraftResultsDeprecatedStackRequestAction:
-			// Don't do anything with this.
+		//case *protocol.CraftResultsDeprecatedStackRequestAction:
+		// Don't do anything with this.
 		default:
 			return fmt.Errorf("unhandled stack request action %#v", action)
 		}
