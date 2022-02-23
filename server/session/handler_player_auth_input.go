@@ -28,7 +28,11 @@ func (h PlayerAuthInputHandler) handleMovement(pk *packet.PlayerAuthInput, s *Se
 	for _, v := range [...]float32{pk.Pitch, pk.Yaw, pk.HeadYaw, pk.Position[0], pk.Position[1], pk.Position[2]} {
 		f := float64(v)
 		if math.IsNaN(f) || math.IsInf(f, 1) || math.IsInf(f, 0) {
-			return fmt.Errorf("player auth input packet must never send nan/inf values")
+			// Sometimes, the PlayerAuthInput packet is in fact sent with NaN/INF after being teleported (to another
+			// world), see #425. For this reason, we don't actually return an error if this happens, because this will
+			// result in the player being kicked. Just log it and don't handle it.
+			s.log.Debugf("failed processing packet from %v (%v): %T: must not have nan/inf values, got %v\n", s.conn.RemoteAddr(), s.c.Name(), pk, f)
+			return nil
 		}
 	}
 
@@ -46,10 +50,11 @@ func (h PlayerAuthInputHandler) handleMovement(pk *packet.PlayerAuthInput, s *Se
 	s.teleportMu.Lock()
 	if s.teleportPos != nil {
 		if newPos.Sub(*s.teleportPos).Len() > 0.5 {
-			s.teleportMu.Unlock()
 			// The player has moved before it received the teleport packet. Ignore this movement entirely and
 			// wait for the client to sync itself back to the server. Once we get a movement that is close
 			// enough to the teleport position, we'll allow the player to move around again.
+			s.log.Debugf("failed processing packet from %v (%v): %T: outdated movement, got %v but expected %v\n", s.conn.RemoteAddr(), s.c.Name(), pk, *s.teleportPos)
+			s.teleportMu.Unlock()
 			s.ViewEntityTeleport(s.c, s.c.Position())
 			return nil
 		}
@@ -84,16 +89,25 @@ func (h PlayerAuthInputHandler) handleActions(pk *packet.PlayerAuthInput, s *Ses
 			return err
 		}
 	}
-	if pk.InputData&packet.InputFlagPerformItemStackRequest != 0 {
-		// God knows what this is for.
-		s.log.Debugf("PlayerAuthInput: unexpected item stack request: %#v\n", pk.ItemStackRequest)
-	}
 	if pk.InputData&packet.InputFlagPerformBlockActions != 0 {
 		if err := h.handleBlockActions(pk.BlockActions, s); err != nil {
 			return err
 		}
 	}
 	h.handleInputFlags(pk.InputData, s)
+
+	if pk.InputData&packet.InputFlagPerformItemStackRequest != 0 {
+		s.inTransaction.Store(true)
+		defer s.inTransaction.Store(false)
+
+		// As of 1.18 this is now used for sending item stack requests such as when mining a block.
+		sh := s.handlers[packet.IDItemStackRequest].(*ItemStackRequestHandler)
+		if err := sh.handleRequest(pk.ItemStackRequest, s); err != nil {
+			// Item stacks being out of sync isn't uncommon, so don't error. Just debug the error and let the
+			// revert do its work.
+			s.log.Debugf("failed processing packet from %v (%v): PlayerAuthInput: error resolving item stack request: %v", s.conn.RemoteAddr(), s.c.Name(), err)
+		}
+	}
 	return nil
 }
 
@@ -116,6 +130,9 @@ func (h PlayerAuthInputHandler) handleInputFlags(flags uint64, s *Session) {
 	}
 	if flags&packet.InputFlagStopSwimming != 0 {
 		s.c.StopSwimming()
+	}
+	if flags&packet.InputFlagStartJumping != 0 {
+		s.c.Jump()
 	}
 }
 

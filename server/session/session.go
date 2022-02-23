@@ -29,7 +29,8 @@ import (
 // Session handles incoming packets from connections and sends outgoing packets by providing a thin layer
 // of abstraction over direct packets. A Session basically 'controls' an entity.
 type Session struct {
-	log internal.Logger
+	log  internal.Logger
+	once sync.Once
 
 	c        Controllable
 	conn     Conn
@@ -39,7 +40,8 @@ type Session struct {
 	// session controls.
 	onStop func(controllable Controllable)
 
-	scoreboardObj atomic.String
+	currentScoreboard atomic.String
+	currentLines      atomic.Value
 
 	chunkBuf                    *bytes.Buffer
 	chunkLoader                 *world.Loader
@@ -156,6 +158,8 @@ func New(conn Conn, maxChunkRadius int, log internal.Logger, joinMessage, quitMe
 	}
 	s.openedWindow.Store(inventory.New(1, nil))
 	s.openedPos.Store(cube.Pos{})
+	s.currentScoreboard.Store("")
+	s.currentLines.Store([]string{})
 
 	s.registerHandlers()
 	return s
@@ -172,21 +176,25 @@ func (s *Session) Start(c Controllable, w *world.World, gm world.GameMode, onSto
 	s.entities[selfEntityRuntimeID] = c
 
 	s.chunkLoader = world.NewLoader(int(s.chunkRadius), w, s)
-	s.chunkLoader.Move(w.Spawn().Vec3Middle())
+	spawn := w.Spawn()
+	s.chunkLoader.Move(spawn.Vec3Middle())
+	s.writePacket(&packet.NetworkChunkPublisherUpdate{
+		Position: protocol.BlockPos{int32(spawn[0]), int32(spawn[1]), int32(spawn[2])},
+		Radius:   uint32(s.chunkRadius) << 4,
+	})
 
 	s.sendAvailableEntities()
 
 	s.initPlayerList()
 
-	w.AddEntity(s.c)
+	w.AddEntity(c)
 	s.c.SetGameMode(gm)
 	s.SendSpeed(0.1)
 	for _, e := range s.c.Effects() {
 		s.SendEffect(e)
 	}
 
-	go s.handlePackets()
-
+	chat.Global.Subscribe(c)
 	if j := s.joinMessage.Load(); j != "" {
 		_, _ = fmt.Fprintln(chat.Global, text.Colourf("<yellow>%v</yellow>", fmt.Sprintf(j, s.conn.IdentityData().DisplayName)))
 	}
@@ -198,37 +206,43 @@ func (s *Session) Start(c Controllable, w *world.World, gm world.GameMode, onSto
 	s.sendRecipes()
 
 	s.writePacket(&packet.CreativeContent{Items: creativeItems()})
+
+	go s.handlePackets()
 }
 
 // Close closes the session, which in turn closes the controllable and the connection that the session
-// manages.
+// manages. Close ensures the method only runs code on the first call.
 func (s *Session) Close() error {
-	s.closeCurrentContainer()
+	s.once.Do(s.close)
+	return nil
+}
 
-	_ = s.conn.Close()
+// close closes the session, which in turn closes the controllable and the connection that the session
+// manages.
+func (s *Session) close() {
+	_ = s.c.Close()
+
+	s.onStop(s.c)
+
+	// Clear the inventories so that they no longer hold references to the connection.
+	_ = s.inv.Close()
+	_ = s.offHand.Close()
+	_ = s.armour.Close()
+
+	s.closeCurrentContainer()
 	_ = s.chunkLoader.Close()
+	s.c.World().RemoveEntity(s.c)
+
+	// This should always be called last due to the timing of the removal of entity runtime IDs.
+	s.closePlayerList()
+	s.entityMutex.Lock()
+	s.entityRuntimeIDs, s.entities = map[world.Entity]uint64{}, map[uint64]world.Entity{}
+	s.entityMutex.Unlock()
 
 	if j := s.quitMessage.Load(); j != "" {
 		_, _ = fmt.Fprintln(chat.Global, text.Colourf("<yellow>%v</yellow>", fmt.Sprintf(j, s.conn.IdentityData().DisplayName)))
 	}
-
-	if s.onStop != nil {
-		s.onStop(s.c)
-		s.onStop = nil
-
-		_ = s.c.Close()
-		s.c.World().RemoveEntity(s.c)
-	}
-
-	// This should always be called last due to the timing of the removal of entity runtime IDs.
-	s.closePlayerList()
-
-	s.entityMutex.Lock()
-	s.entityRuntimeIDs = map[world.Entity]uint64{}
-	s.entities = map[uint64]world.Entity{}
-	s.entityMutex.Unlock()
-
-	return nil
+	chat.Global.Unsubscribe(s.c)
 }
 
 // CloseConnection closes the underlying connection of the session so that the session ends up being closed
@@ -255,7 +269,7 @@ func (s *Session) ClientData() login.ClientData {
 // handlePackets continuously handles incoming packets from the connection. It processes them accordingly.
 // Once the connection is closed, handlePackets will return.
 func (s *Session) handlePackets() {
-	c := make(chan struct{})
+	chunks, commands := make(chan struct{}), make(chan struct{})
 	defer func() {
 		// If this function ends up panicking, we don't want to call s.Close() as it may cause the entire
 		// server to freeze without printing the actual panic message.
@@ -264,11 +278,21 @@ func (s *Session) handlePackets() {
 		if err := recover(); err != nil {
 			panic(err)
 		}
-		c <- struct{}{}
+		chunks <- struct{}{}
+		commands <- struct{}{}
+
 		_ = s.Close()
 	}()
-	go s.sendChunks(c)
-	go s.sendCommands(c)
+
+	go s.sendChunks(chunks)
+	go s.sendCommands(commands)
+
+	s.readPackets()
+}
+
+// readPackets starts reading packets from the underlying Conn. readPackets returns when an error is returned in doing
+// so.
+func (s *Session) readPackets() {
 	for {
 		pk, err := s.conn.ReadPacket()
 		if err != nil {
@@ -308,8 +332,8 @@ func (s *Session) sendChunks(stop <-chan struct{}) {
 		select {
 		case <-t.C:
 			s.blobMu.Lock()
-			if s.chunkLoader.World() != s.c.World() && s.c.World() != nil {
-				s.handleWorldSwitch()
+			if w := s.c.World(); s.chunkLoader.World() != w && w != nil {
+				s.handleWorldSwitch(w)
 			}
 
 			toLoad := maxChunkTransactions - len(s.openChunkTransactions)
@@ -361,7 +385,7 @@ func (s *Session) sendCommands(stop <-chan struct{}) {
 }
 
 // handleWorldSwitch handles the player of the Session switching worlds.
-func (s *Session) handleWorldSwitch() {
+func (s *Session) handleWorldSwitch(w *world.World) {
 	if s.conn.ClientCacheEnabled() {
 		// Force out all blobs before changing worlds. This ensures no outdated chunk loading in the new world.
 		resp := &packet.ClientCacheMissResponse{Blobs: make([]protocol.CacheBlob, 0, len(s.blobs))}
@@ -374,11 +398,11 @@ func (s *Session) handleWorldSwitch() {
 		s.openChunkTransactions = nil
 	}
 
-	if s.c.World().Dimension() != s.chunkLoader.World().Dimension() {
-		s.writePacket(&packet.ChangeDimension{Dimension: int32(s.c.World().Dimension().EncodeDimension()), Position: vec64To32(s.c.Position().Add(entityOffset(s.c)))})
+	if w.Dimension() != s.chunkLoader.World().Dimension() {
+		s.writePacket(&packet.ChangeDimension{Dimension: int32(w.Dimension().EncodeDimension()), Position: vec64To32(s.c.Position().Add(entityOffset(s.c)))})
 		s.writePacket(&packet.PlayStatus{Status: packet.PlayStatusPlayerSpawn})
 	}
-	s.chunkLoader.ChangeWorld(s.c.World())
+	s.chunkLoader.ChangeWorld(w)
 }
 
 // handlePacket handles an incoming packet, processing it accordingly. If the packet had invalid data or was

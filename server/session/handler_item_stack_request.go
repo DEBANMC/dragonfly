@@ -49,7 +49,6 @@ func (h *ItemStackRequestHandler) Handle(p packet.Packet, s *Session) error {
 	defer s.inTransaction.Store(false)
 
 	for _, req := range pk.Requests {
-		h.currentRequest = req.RequestID
 		if err := h.handleRequest(req, s); err != nil {
 			// Item stacks being out of sync isn't uncommon, so don't error. Just debug the error and let the
 			// revert do its work.
@@ -61,9 +60,9 @@ func (h *ItemStackRequestHandler) Handle(p packet.Packet, s *Session) error {
 
 // handleRequest resolves a single item stack request from the client.
 func (h *ItemStackRequestHandler) handleRequest(req protocol.ItemStackRequest, s *Session) (err error) {
+	h.currentRequest = req.RequestID
 	defer func() {
 		if err != nil {
-			s.log.Debugf("%v", err)
 			h.reject(req.RequestID, s)
 			return
 		}
@@ -92,6 +91,9 @@ func (h *ItemStackRequestHandler) handleRequest(req protocol.ItemStackRequest, s
 		case *protocol.CraftCreativeStackRequestAction:
 			err = h.handleCreativeCraft(a, s)
 		case *protocol.ConsumeStackRequestAction, *protocol.CraftResultsDeprecatedStackRequestAction:
+		case *protocol.MineBlockStackRequestAction:
+			err = h.handleMineBlock(a, s)
+		case *protocol.CraftResultsDeprecatedStackRequestAction:
 			// Don't do anything with this.
 		default:
 			return fmt.Errorf("unhandled stack request action %#v", action)
@@ -354,6 +356,25 @@ func (h *ItemStackRequestHandler) handleBeaconPayment(a *protocol.BeaconPaymentS
 	return nil
 }
 
+// handleMineBlock handles the action associated with a block being mined by the player. This seems to be a workaround
+// by Mojang to deal with the durability changes client-side.
+func (h *ItemStackRequestHandler) handleMineBlock(a *protocol.MineBlockStackRequestAction, s *Session) error {
+	slot := protocol.StackRequestSlotInfo{
+		ContainerID:    containerInventory,
+		Slot:           byte(a.HotbarSlot),
+		StackNetworkID: a.StackNetworkID,
+	}
+	if err := h.verifySlot(slot, s); err != nil {
+		return err
+	}
+
+	// Update the slots through ItemStackResponses, don't actually do anything special with this action.
+	i, _ := h.itemInSlot(slot, s)
+	h.setItemInSlot(slot, i, s)
+
+	return nil
+}
+
 // validBeaconEffect checks if the ID passed is a valid beacon effect.
 func (h *ItemStackRequestHandler) validBeaconEffect(id int32, beacon block.Beacon) bool {
 	switch id {
@@ -489,10 +510,11 @@ func (h *ItemStackRequestHandler) setItemInSlot(slot protocol.StackRequestSlotIn
 	_ = inv.SetItem(sl, i)
 
 	respSlot := protocol.StackResponseSlotInfo{
-		Slot:           slot.Slot,
-		HotbarSlot:     slot.Slot,
-		Count:          byte(i.Count()),
-		StackNetworkID: item_id(i),
+		Slot:                 slot.Slot,
+		HotbarSlot:           slot.Slot,
+		Count:                byte(i.Count()),
+		StackNetworkID:       item_id(i),
+		DurabilityCorrection: int32(i.MaxDurability() - i.Durability()),
 	}
 
 	if h.changes[slot.ContainerID] == nil {

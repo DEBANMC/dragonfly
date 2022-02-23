@@ -76,16 +76,13 @@ func (s *Session) sendBlobHashes(pos world.ChunkPos, c *chunk.Chunk, blockEntiti
 	}
 
 	s.writePacket(&packet.LevelChunk{
-		ChunkX:        pos[0],
-		ChunkZ:        pos[1],
+		Position:      protocol.ChunkPos{pos.X(), pos.Z()},
 		SubChunkCount: count,
 		CacheEnabled:  true,
 		BlobHashes:    hashes,
 		RawPayload:    raw.Bytes(),
 	})
 }
-
-var emptyHeightmap = make([]byte, 512)
 
 // sendNetworkChunk sends a network encoded chunk to the client.
 func (s *Session) sendNetworkChunk(pos world.ChunkPos, c *chunk.Chunk, blockEntities map[cube.Pos]world.Block) {
@@ -94,7 +91,7 @@ func (s *Session) sendNetworkChunk(pos world.ChunkPos, c *chunk.Chunk, blockEnti
 	for i := range data.SubChunks {
 		_, _ = s.chunkBuf.Write(data.SubChunks[i])
 	}
-	_, _ = s.chunkBuf.Write(append(emptyHeightmap, data.Biomes...))
+	_, _ = s.chunkBuf.Write(data.Biomes)
 
 	// Length of 1 byte for the border block count.
 	s.chunkBuf.WriteByte(0)
@@ -109,8 +106,7 @@ func (s *Session) sendNetworkChunk(pos world.ChunkPos, c *chunk.Chunk, blockEnti
 	}
 
 	s.writePacket(&packet.LevelChunk{
-		ChunkX:        pos[0],
-		ChunkZ:        pos[1],
+		Position:      protocol.ChunkPos{pos.X(), pos.Z()},
 		SubChunkCount: uint32(len(data.SubChunks)),
 		RawPayload:    append([]byte(nil), s.chunkBuf.Bytes()...),
 	})
@@ -518,6 +514,10 @@ func (s *Session) ViewSound(pos mgl64.Vec3, soundType world.Sound) {
 			Position:  vec64To32(pos),
 		})
 		return
+	case sound.UseSpyglass:
+		pk.SoundType = packet.SoundEventUseSpyglass
+	case sound.StopUsingSpyglass:
+		pk.SoundType = packet.SoundEventStopUsingSpyglass
 	case sound.FireExtinguish:
 		pk.SoundType = packet.SoundEventExtinguishFire
 	case sound.Ignite:
