@@ -1,4 +1,4 @@
-module github.com/DEBANMC/dragonfly
+module github.com/df-mc/dragonfly
 
 go 1.16
 
