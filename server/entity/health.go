@@ -37,6 +37,19 @@ func (m *HealthManager) AddHealth(health float64) {
 	m.health = l
 }
 
+func (m *HealthManager) SetHealth(health float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	l := health
+	if l < 0 {
+		l = 0
+	} else if l > m.max {
+		l = m.max
+	}
+	m.health = l
+}
+
 // MaxHealth returns the maximum health of the entity.
 func (m *HealthManager) MaxHealth() float64 {
 	m.mu.RLock()

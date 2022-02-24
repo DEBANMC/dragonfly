@@ -2,6 +2,13 @@ package player
 
 import (
 	"fmt"
+	"math"
+	"math/rand"
+	"net"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/cmd"
@@ -28,12 +35,6 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/atomic"
 	"golang.org/x/text/language"
-	"math"
-	"math/rand"
-	"net"
-	"strings"
-	"sync"
-	"time"
 )
 
 // Player is an implementation of a player entity. It has methods that implement the behaviour that players
@@ -457,9 +458,14 @@ func (p *Player) SetMaxHealth(health float64) {
 	p.session().SendHealth(p.health)
 }
 
-// addHealth adds health to the player's current health.
-func (p *Player) addHealth(health float64) {
+// AddHealth adds health to the player's current health.
+func (p *Player) AddHealth(health float64) {
 	p.health.AddHealth(health)
+	p.session().SendHealth(p.health)
+}
+
+func (p *Player) SetHealth(health float64) {
+	p.health.SetHealth(health)
 	p.session().SendHealth(p.health)
 }
 
@@ -474,7 +480,7 @@ func (p *Player) Heal(health float64, source healing.Source) {
 	ctx := event.C()
 	p.handler().HandleHeal(ctx, &health, source)
 	ctx.Continue(func() {
-		p.addHealth(health)
+		p.AddHealth(health)
 	})
 }
 
@@ -556,7 +562,7 @@ func (p *Player) Hurt(dmg float64, source damage.Source) (float64, bool) {
 				damageLeft = 0
 			}
 		}
-		p.addHealth(-damageLeft)
+		p.AddHealth(-damageLeft)
 
 		if source.ReducedByArmour() {
 			p.Exhaust(0.1)
@@ -574,10 +580,49 @@ func (p *Player) Hurt(dmg float64, source damage.Source) (float64, bool) {
 		}
 		p.SetAttackImmunity(time.Second / 2)
 		if p.Dead() {
-			p.kill(source)
+			if !p.checkTotem(source) {
+				p.kill(source)
+			}
 		}
 	})
 	return totalDamage, vulnerable
+}
+
+func (p *Player) checkTotem(source damage.Source) bool {
+	it1, it2 := p.HeldItems()
+	var name string
+	var meta int16
+	if !it1.Empty() {
+		name, meta = it1.Item().EncodeItem()
+	}
+
+	if name == "minecraft:totem_of_undying" && meta == 0 {
+		switch itemTotem := it1.Item().(type) {
+		case item.ConsumableTotem:
+			itemTotem.Consume(p.World(), p)
+		}
+
+		p.SetHeldItems(item.NewStack(it1.Item(), 0), it2)
+		p.Message("Ga")
+		return true
+	}
+
+	if !it2.Empty() {
+		name, meta = it2.Item().EncodeItem()
+	}
+
+	if name == "minecraft:totem_of_undying" && meta == 0 {
+		switch itemTotem := it2.Item().(type) {
+		case item.ConsumableTotem:
+			itemTotem.Consume(p.World(), p)
+		}
+
+		p.SetHeldItems(it1, item.NewStack(it2.Item(), 0))
+		p.Message("Gb")
+		return true
+	}
+
+	return false
 }
 
 // FinalDamageFrom resolves the final damage received by the player if it is attacked by the source passed
@@ -762,13 +807,19 @@ func (p *Player) Dead() bool {
 	return p.Health() <= 0
 }
 
+func (p *Player) ClearEffects() {
+	for _, e := range p.Effects() {
+		p.RemoveEffect(e.Type())
+	}
+}
+
 // kill kills the player, clearing its inventories and resetting it to its base state.
 func (p *Player) kill(src damage.Source) {
 	for _, viewer := range p.viewers() {
 		viewer.ViewEntityAction(p, entity.DeathAction{})
 	}
 
-	p.addHealth(-p.MaxHealth())
+	p.AddHealth(-p.MaxHealth())
 
 	p.handler().HandleDeath(src)
 	p.StopSneaking()
@@ -777,9 +828,7 @@ func (p *Player) kill(src damage.Source) {
 	w := p.World()
 	p.dropItems()
 
-	for _, e := range p.Effects() {
-		p.RemoveEffect(e.Type())
-	}
+	p.ClearEffects()
 
 	// Wait a little before removing the entity. The client displays a death animation while the player is dying.
 	time.AfterFunc(time.Millisecond*1100, func() {
@@ -817,7 +866,7 @@ func (p *Player) Respawn() {
 	if !p.Dead() || w == nil || p.session() == session.Nop {
 		return
 	}
-	p.addHealth(p.MaxHealth())
+	p.AddHealth(p.MaxHealth())
 	p.hunger.Reset()
 	p.sendFood()
 	p.Extinguish()
@@ -1198,6 +1247,34 @@ func (p *Player) UseItem() {
 			}
 		case item.Consumable:
 			if !usable.AlwaysConsumable() && p.GameMode().AllowsTakingDamage() && p.Food() >= 20 {
+				// The item.Consumable is not always consumable, the player is not in creative mode and the
+				// food bar is filled: The item cannot be consumed.
+				p.ReleaseItem()
+				return
+			}
+			if !p.usingItem.CAS(false, true) {
+				// The player is currently using the item held. This is a signal the item was consumed, so we
+				// consume it and start using it again.
+				p.ReleaseItem()
+
+				// Due to the network overhead and latency, the duration might sometimes be a little off. We
+				// slightly increase the duration to combat this.
+				duration := p.useDuration()
+				if duration < usable.ConsumeDuration() {
+					// The required duration for consuming this item was not met, so we don't consume it.
+					return
+				}
+				p.SetHeldItems(p.subtractItem(i, 1), left)
+
+				ctx := p.useContext()
+				ctx.NewItem = usable.Consume(w, p)
+				p.addNewItem(ctx)
+				w.PlaySound(p.Position().Add(mgl64.Vec3{0, 1.5}), sound.Burp{})
+			}
+			p.usingSince.Store(time.Now().UnixNano())
+			p.updateState()
+		case item.ConsumableTotem:
+			if !usable.AlwaysConsumable() && p.GameMode().AllowsTakingDamage() {
 				// The item.Consumable is not always consumable, the player is not in creative mode and the
 				// food bar is filled: The item cannot be consumed.
 				p.ReleaseItem()

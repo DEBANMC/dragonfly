@@ -2,6 +2,8 @@ package session
 
 import (
 	"bytes"
+	"math/rand"
+
 	"github.com/cespare/xxhash"
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
@@ -19,7 +21,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/nbt"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"math/rand"
 )
 
 // ViewChunk ...
@@ -500,6 +501,12 @@ func (s *Session) ViewSound(pos mgl64.Vec3, soundType world.Sound) {
 	case sound.EndermanTeleport:
 		s.writePacket(&packet.LevelEvent{
 			EventType: packet.LevelEventSoundEndermanTeleport,
+			Position:  vec64To32(pos),
+		})
+		return
+	case sound.TotemUsed:
+		s.writePacket(&packet.LevelEvent{
+			EventType: packet.LevelEventSoundTotemUsed,
 			Position:  vec64To32(pos),
 		})
 		return
