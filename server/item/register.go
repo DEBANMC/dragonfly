@@ -150,4 +150,5 @@ func init() {
 	world.RegisterItem(AmethystShard{})
 
 	world.RegisterItem(Totem{})
+	world.RegisterItem(Shield{})
 }
