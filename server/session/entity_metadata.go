@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"image/color"
 	"time"
 
@@ -28,8 +29,13 @@ func parseEntityMetadata(e world.Entity) entityMetadata {
 
 	m.setFlag(dataKeyFlags, dataFlagAffectedByGravity)
 	m.setFlag(dataKeyFlags, dataFlagCanClimb)
+
 	if s, ok := e.(sneaker); ok && s.Sneaking() {
 		m.setFlag(dataKeyFlags, dataFlagSneaking)
+	}
+	if s, ok := e.(shield); ok && s.Blocking() {
+		fmt.Println("yes")
+		m.setFlag(dataKeyFlags, dataFlagBlocking) //ermolay
 	}
 	if s, ok := e.(sprinter); ok && s.Sprinting() {
 		m.setFlag(dataKeyFlags, dataFlagSprinting)
@@ -141,6 +147,7 @@ const (
 	dataFlagAffectedByGravity = 48
 	dataFlagEnchanted         = 51
 	dataFlagSwimming          = 56
+	dataFlagBlocking          = 71
 )
 
 type sneaker interface {
@@ -201,4 +208,8 @@ type using interface {
 
 type arrow interface {
 	Critical() bool
+}
+
+type shield interface {
+	Blocking() bool
 }

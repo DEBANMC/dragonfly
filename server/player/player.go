@@ -607,7 +607,6 @@ func (p *Player) checkTotem(source damage.Source) bool {
 		}
 
 		p.SetHeldItems(item.NewStack(it1.Item(), 0), it2)
-		p.Message("Ga")
 		return true
 	}
 
@@ -622,7 +621,6 @@ func (p *Player) checkTotem(source damage.Source) bool {
 		}
 
 		p.SetHeldItems(it1, item.NewStack(it2.Item(), 0))
-		p.Message("Gb")
 		return true
 	}
 
@@ -949,6 +947,25 @@ func (p *Player) StartSneaking() {
 // Sneaking checks if the player is currently sneaking.
 func (p *Player) Sneaking() bool {
 	return p.sneaking.Load()
+}
+
+func (p *Player) Blocking() bool {
+	it1, it2 := p.HeldItems()
+	var name1, name2 string
+	var meta1, meta2 int16
+	if !it1.Empty() {
+		name1, meta1 = it1.Item().EncodeItem()
+	}
+
+	if !it2.Empty() {
+		name2, meta2 = it2.Item().EncodeItem()
+	}
+
+	if ((name1 == "minecraft:shield" && meta1 == 0) || (name2 == "minecraft:shield" && meta2 == 0)) && p.sneaking.Load() {
+		return true
+	}
+
+	return false
 }
 
 // StopSneaking makes a player stop sneaking if it currently is. If the player is not sneaking, StopSneaking
