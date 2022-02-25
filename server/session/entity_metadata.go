@@ -1,12 +1,13 @@
 package session
 
 import (
+	"image/color"
+	"time"
+
 	"github.com/df-mc/dragonfly/server/entity/effect"
 	"github.com/df-mc/dragonfly/server/internal/nbtconv"
 	"github.com/df-mc/dragonfly/server/item/potion"
 	"github.com/df-mc/dragonfly/server/world"
-	"image/color"
-	"time"
 )
 
 // entityMetadata represents a map that holds metadata associated with an entity. The data held in the map

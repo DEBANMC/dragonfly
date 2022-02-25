@@ -589,6 +589,10 @@ func (p *Player) Hurt(dmg float64, source damage.Source) (float64, bool) {
 }
 
 func (p *Player) checkTotem(source damage.Source) bool {
+	if (source == damage.SourceVoid{}) || (source == damage.SourceCustom{}) {
+		return false
+	}
+
 	it1, it2 := p.HeldItems()
 	var name string
 	var meta int16
