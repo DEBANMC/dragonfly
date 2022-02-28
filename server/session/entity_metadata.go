@@ -34,7 +34,7 @@ func parseEntityMetadata(e world.Entity) entityMetadata {
 		m.setFlag(dataKeyFlags, dataFlagSneaking)
 	}
 	if s, ok := e.(shield); ok && s.Blocking() {
-		fmt.Println("yes")
+		fmt.Println("yes1")
 		m.setFlag(dataKeyFlags, dataFlagBlocking) //ermolay
 	}
 	if s, ok := e.(sprinter); ok && s.Sprinting() {
