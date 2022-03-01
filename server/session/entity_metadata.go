@@ -1,7 +1,6 @@
 package session
 
 import (
-	"fmt"
 	"image/color"
 	"time"
 
@@ -34,14 +33,13 @@ func parseEntityMetadata(e world.Entity) entityMetadata {
 		m.setFlag(dataKeyFlags, dataFlagSneaking)
 	}
 	if s, ok := e.(shield); ok && s.Blocking() {
-		fmt.Println("yes1")
-		m.setFlag(dataKeyFlags, dataFlagBlocking) //ermolay
+		m.setFlag(dataKeyExtended, dataFlagBlocking)
 	}
 	if s, ok := e.(sprinter); ok && s.Sprinting() {
 		m.setFlag(dataKeyFlags, dataFlagSprinting)
 	}
 	if s, ok := e.(swimmer); ok && s.Swimming() {
-		m.setFlag(dataKeyFlags, dataFlagSwimming)
+		m.setFlag(dataKeyFlags, dataFlagSwimming) //e
 	}
 	if s, ok := e.(breather); ok && s.Breathing() {
 		m.setFlag(dataKeyFlags, dataFlagBreathing)
@@ -128,6 +126,7 @@ const (
 	dataKeyBoundingBoxHeight = 54
 	dataKeyAlwaysShowNameTag = 81
 	dataKeyScoreTag          = 84
+	dataKeyExtended          = 92
 )
 
 //noinspection GoUnusedConst

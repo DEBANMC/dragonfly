@@ -961,7 +961,7 @@ func (p *Player) Blocking() bool {
 		name2, meta2 = it2.Item().EncodeItem()
 	}
 
-	if ((name1 == "minecraft:shield" && meta1 == 0) || (name2 == "minecraft:shield" && meta2 == 0)) && p.sneaking.Load() {
+	if ((name1 == "minecraft:shield" && meta1 == 0) || (name2 == "minecraft:shield" && meta2 == 0)) && p.Sneaking() {
 		return true
 	}
 
