@@ -39,7 +39,7 @@ func parseEntityMetadata(e world.Entity) entityMetadata {
 		m.setFlag(dataKeyFlags, dataFlagSprinting)
 	}
 	if s, ok := e.(swimmer); ok && s.Swimming() {
-		m.setFlag(dataKeyFlags, dataFlagSwimming) //e
+		m.setFlag(dataKeyFlags, dataFlagSwimming)
 	}
 	if s, ok := e.(breather); ok && s.Breathing() {
 		m.setFlag(dataKeyFlags, dataFlagBreathing)
