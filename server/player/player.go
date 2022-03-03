@@ -551,8 +551,7 @@ func (p *Player) Hurt(dmg float64, source damage.Source) (float64, bool) {
 		totalDamage = p.FinalDamageFrom(dmg, source)
 		damageLeft := totalDamage
 
-		a := p.absorption()
-		if a > 0 && (effect.Absorption{}).Absorbs(source) {
+		if a := p.absorption(); a > 0 {
 			if damageLeft > a {
 				damageLeft -= a
 				p.SetAbsorption(0)
@@ -634,7 +633,7 @@ func (p *Player) checkTotem(source damage.Source) bool {
 func (p *Player) FinalDamageFrom(dmg float64, src damage.Source) float64 {
 	if src.ReducedByArmour() {
 		defencePoints := 0.0
-		for _, it := range p.armour.Slots() {
+		for _, it := range p.armour.Items() {
 			if a, ok := it.Item().(item.Armour); ok {
 				defencePoints += a.DefencePoints()
 			}
@@ -646,11 +645,13 @@ func (p *Player) FinalDamageFrom(dmg float64, src damage.Source) float64 {
 	if res, ok := p.Effect(effect.Resistance{}); ok {
 		dmg *= effect.Resistance{}.Multiplier(src, res.Level())
 	}
+	t := 0
 	for _, it := range p.armour.Items() {
-		if p, ok := it.Enchantment(enchantment.Protection{}); ok {
-			dmg -= (enchantment.Protection{}).Subtrahend(p.Level())
+		if p, ok := it.Enchantment(enchantment.Protection{}); ok && (enchantment.Protection{}).Affects(src) {
+			t += p.Level() + 1
 		}
 	}
+	dmg *= (enchantment.Protection{}).Multiplier(t)
 	if f, ok := p.Armour().Boots().Enchantment(enchantment.FeatherFalling{}); ok && (src == damage.SourceFall{}) {
 		dmg *= (enchantment.FeatherFalling{}).Multiplier(f.Level())
 	}
@@ -1931,6 +1932,14 @@ func (p *Player) Move(deltaPos mgl64.Vec3, deltaYaw, deltaPitch float64) {
 		p.yaw.Store(resYaw)
 		p.pitch.Store(resPitch)
 
+		_, submergedBefore := w.Liquid(cube.PosFromVec3(pos.Add(mgl64.Vec3{0, p.EyeHeight()})))
+		_, submergedAfter := w.Liquid(cube.PosFromVec3(res.Add(mgl64.Vec3{0, p.EyeHeight()})))
+		if submergedBefore != submergedAfter {
+			// Player wasn't either breathing before and no longer isn't, or wasn't breathing before and now is,
+			// so send the updated metadata.
+			p.session().ViewEntityState(p)
+		}
+
 		p.checkBlockCollisions(w)
 		p.onGround.Store(p.checkOnGround(w))
 
@@ -2419,6 +2428,12 @@ func (p *Player) Close() error {
 // close closes the player without disconnecting it. It executes code shared by both the closing and the
 // disconnecting of players.
 func (p *Player) close(msg string) {
+	// If the player is being disconnected while they are dead, we respawn the player
+	// so that the player logic works correctly the next time they join.
+	if p.Dead() && p.session() != nil {
+		p.Respawn()
+	}
+
 	p.sMutex.Lock()
 	s := p.s
 	p.s = nil
@@ -2429,12 +2444,8 @@ func (p *Player) close(msg string) {
 	p.h = NopHandler{}
 	p.hMutex.Unlock()
 
-	// If the player is being disconnected while they are dead, we respawn the player
-	// so that the player logic works correctly the next time they join.
-	if p.Dead() && s != nil {
-		p.Respawn()
-	}
-	h.HandleQuit()
+	s.Disconnect(msg)
+	s.CloseConnection()
 
 	if s == nil {
 		// Only remove the player from the world if it's not attached to a session. If it is attached to a session, the
@@ -2442,8 +2453,7 @@ func (p *Player) close(msg string) {
 		p.World().RemoveEntity(p)
 		return
 	}
-	s.Disconnect(msg)
-	s.CloseConnection()
+	h.HandleQuit()
 }
 
 // load reads the player data from the provider. It uses the default values if the provider
