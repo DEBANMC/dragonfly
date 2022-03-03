@@ -29,11 +29,13 @@ func parseEntityMetadata(e world.Entity) entityMetadata {
 	m.setFlag(dataKeyFlags, dataFlagAffectedByGravity)
 	m.setFlag(dataKeyFlags, dataFlagCanClimb)
 
+	if s, ok := e.(blocking); ok && s.Blocking() {
+		m[dataKeyExtended] = int64(128)
+	} else {
+		m[dataKeyExtended] = int64(0)
+	}
 	if s, ok := e.(sneaker); ok && s.Sneaking() {
 		m.setFlag(dataKeyFlags, dataFlagSneaking)
-	}
-	if s, ok := e.(shield); ok && s.Blocking() {
-		m.setFlag(dataKeyExtended, dataFlagBlocking)
 	}
 	if s, ok := e.(sprinter); ok && s.Sprinting() {
 		m.setFlag(dataKeyFlags, dataFlagSprinting)
@@ -209,6 +211,6 @@ type arrow interface {
 	Critical() bool
 }
 
-type shield interface {
+type blocking interface {
 	Blocking() bool
 }
