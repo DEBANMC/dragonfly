@@ -1516,6 +1516,15 @@ func (p *Player) AttackEntity(e world.Entity) {
 			return
 		}
 
+		attacked, ok := living.(*Player)
+
+		if ok {
+			blocked := attacked.blockingByShield(p)
+			if blocked {
+				return
+			}
+		}
+
 		damageDealt := i.AttackDamage()
 		if strength, ok := p.Effect(effect.Strength{}); ok {
 			damageDealt += damageDealt * effect.Strength{}.Multiplier(strength.Level())
@@ -1557,6 +1566,23 @@ func (p *Player) AttackEntity(e world.Entity) {
 			}
 		}
 	})
+}
+
+func (p *Player) blockingByShield(attacker *Player) bool {
+	if !p.Blocking() {
+		return false
+	}
+
+	entityPos := attacker.Position()
+	var dx, dz float64 = p.Rotation()
+	normalizedVector := p.Position().Sub(entityPos).Normalize()
+	blocked := (normalizedVector.X()*dx)+(normalizedVector.Z()*dz) > 0.0
+
+	if blocked {
+		attacker.KnockBack(p.Position(), 0.6, 0.40)
+	}
+
+	return blocked
 }
 
 // StartBreaking makes the player start breaking the block at the position passed using the item currently
