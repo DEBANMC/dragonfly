@@ -337,6 +337,21 @@ func (s *Session) background() {
 	}
 }
 
+func (s *Session) craftingSize() byte {
+	if s.openedContainerID.Load() == 1 {
+		return craftingSizeLarge
+	}
+	return craftingSizeSmall
+}
+
+// craftingOffset gets the crafting offset based on the opened container ID.
+func (s *Session) craftingOffset() byte {
+	if s.openedContainerID.Load() == 1 {
+		return craftingGridLargeOffset
+	}
+	return craftingGridSmallOffset
+}
+
 // sendChunks sends the next up to 4 chunks to the connection. What chunks are loaded depends on the connection of
 // the chunk loader and the chunks that were previously loaded.
 func (s *Session) sendChunks() {
