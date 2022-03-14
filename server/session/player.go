@@ -244,6 +244,9 @@ func (s *Session) SendGameMode(mode world.GameMode) {
 	}
 	if !mode.HasCollision() {
 		flags |= packet.AdventureFlagNoClip
+		// If the client is currently on the ground and turned to spectator mode, it will be unable to sprint during
+		// flight. In order to allow this, we force the client to be flying through a MovePlayer packet.
+		s.ViewEntityTeleport(s.c, s.c.Position())
 	}
 	if !mode.AllowsEditing() {
 		flags |= packet.AdventureFlagWorldImmutable
@@ -254,9 +257,6 @@ func (s *Session) SendGameMode(mode world.GameMode) {
 		flags |= packet.AdventureSettingsFlagsNoPvM
 	} else {
 		perms |= packet.ActionPermissionDoorsAndSwitches | packet.ActionPermissionOpenContainers | packet.ActionPermissionAttackPlayers | packet.ActionPermissionAttackMobs
-	}
-	if !mode.Visible() {
-		flags |= packet.AdventureFlagMuted
 	}
 	// Creative or spectator players both use the same game type over the network.
 	if mode.AllowsFlying() && mode.CreativeInventory() {

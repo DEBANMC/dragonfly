@@ -940,7 +940,9 @@ func (p *Player) StartSneaking() {
 		if !p.sneaking.CAS(false, true) {
 			return
 		}
-		p.StopSprinting()
+		if !p.Flying() {
+			p.StopSprinting()
+		}
 		p.updateState()
 	})
 }
@@ -2201,7 +2203,7 @@ func (p *Player) starve(w *world.World) {
 
 // checkCollisions checks the player's block collisions.
 func (p *Player) checkBlockCollisions(w *world.World) {
-	aabb := p.AABB().Translate(p.Position())
+	aabb := p.AABB().Translate(p.Position()).Grow(-0.0001)
 	min, max := cube.PosFromVec3(aabb.Min()), cube.PosFromVec3(aabb.Max())
 
 	for y := min[1]; y <= max[1]; y++ {
@@ -2470,14 +2472,13 @@ func (p *Player) close(msg string) {
 	p.h = NopHandler{}
 	p.hMutex.Unlock()
 
-	s.Disconnect(msg)
-	s.CloseConnection()
-
-	if s == nil {
+	if s != nil {
+		s.Disconnect(msg)
+		s.CloseConnection()
+	} else {
 		// Only remove the player from the world if it's not attached to a session. If it is attached to a session, the
 		// session will remove the player once ready.
 		p.World().RemoveEntity(p)
-		return
 	}
 	h.HandleQuit()
 }
