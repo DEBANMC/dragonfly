@@ -545,8 +545,7 @@ func (p *Player) Hurt(dmg float64, source damage.Source) (float64, bool) {
 		totalDamage = p.FinalDamageFrom(dmg, source)
 		damageLeft := totalDamage
 
-		a := p.absorption()
-		if a > 0 && (effect.Absorption{}).Absorbs(source) {
+		if a := p.absorption(); a > 0 {
 			if damageLeft > a {
 				damageLeft -= a
 				p.SetAbsorption(0)
@@ -587,7 +586,7 @@ func (p *Player) Hurt(dmg float64, source damage.Source) (float64, bool) {
 func (p *Player) FinalDamageFrom(dmg float64, src damage.Source) float64 {
 	if src.ReducedByArmour() {
 		defencePoints := 0.0
-		for _, it := range p.armour.Slots() {
+		for _, it := range p.armour.Items() {
 			if a, ok := it.Item().(item.Armour); ok {
 				defencePoints += a.DefencePoints()
 			}
@@ -599,11 +598,13 @@ func (p *Player) FinalDamageFrom(dmg float64, src damage.Source) float64 {
 	if res, ok := p.Effect(effect.Resistance{}); ok {
 		dmg *= effect.Resistance{}.Multiplier(src, res.Level())
 	}
+	t := 0
 	for _, it := range p.armour.Items() {
-		if p, ok := it.Enchantment(enchantment.Protection{}); ok {
-			dmg -= (enchantment.Protection{}).Subtrahend(p.Level())
+		if p, ok := it.Enchantment(enchantment.Protection{}); ok && (enchantment.Protection{}).Affects(src) {
+			t += p.Level() + 1
 		}
 	}
+	dmg *= (enchantment.Protection{}).Multiplier(t)
 	if f, ok := p.Armour().Boots().Enchantment(enchantment.FeatherFalling{}); ok && (src == damage.SourceFall{}) {
 		dmg *= (enchantment.FeatherFalling{}).Multiplier(f.Level())
 	}
@@ -775,15 +776,7 @@ func (p *Player) kill(src damage.Source) {
 	p.StopSprinting()
 
 	w := p.World()
-	pos := p.Position()
-	for _, it := range append(p.inv.Items(), append(p.armour.Items(), p.offHand.Items()...)...) {
-		itemEntity := entity.NewItem(it, pos)
-		itemEntity.SetVelocity(mgl64.Vec3{rand.Float64()*0.2 - 0.1, 0.2, rand.Float64()*0.2 - 0.1})
-		w.AddEntity(itemEntity)
-	}
-	p.inv.Clear()
-	p.armour.Clear()
-	p.offHand.Clear()
+	p.dropItems()
 
 	for _, e := range p.Effects() {
 		p.RemoveEffect(e.Type())
@@ -803,6 +796,19 @@ func (p *Player) kill(src damage.Source) {
 			p.pos.Store(w.Spawn().Vec3())
 		}
 	})
+}
+
+// dropItems drops all items in any inventory of the Player on the ground in random directions.
+func (p *Player) dropItems() {
+	w, pos := p.World(), p.Position()
+	for _, it := range append(p.inv.Items(), append(p.armour.Items(), p.offHand.Items()...)...) {
+		itemEntity := entity.NewItem(it, pos)
+		itemEntity.SetVelocity(mgl64.Vec3{rand.Float64()*0.2 - 0.1, 0.2, rand.Float64()*0.2 - 0.1})
+		w.AddEntity(itemEntity)
+	}
+	p.inv.Clear()
+	p.armour.Clear()
+	p.offHand.Clear()
 }
 
 // Respawn spawns the player after it dies, so that its health is replenished and it is spawned in the world
@@ -883,7 +889,9 @@ func (p *Player) StartSneaking() {
 		if !p.sneaking.CAS(false, true) {
 			return
 		}
-		p.StopSprinting()
+		if !p.Flying() {
+			p.StopSprinting()
+		}
 		p.updateState()
 	})
 }
@@ -1828,6 +1836,14 @@ func (p *Player) Move(deltaPos mgl64.Vec3, deltaYaw, deltaPitch float64) {
 		p.yaw.Store(resYaw)
 		p.pitch.Store(resPitch)
 
+		_, submergedBefore := w.Liquid(cube.PosFromVec3(pos.Add(mgl64.Vec3{0, p.EyeHeight()})))
+		_, submergedAfter := w.Liquid(cube.PosFromVec3(res.Add(mgl64.Vec3{0, p.EyeHeight()})))
+		if submergedBefore != submergedAfter {
+			// Player wasn't either breathing before and no longer isn't, or wasn't breathing before and now is,
+			// so send the updated metadata.
+			p.session().ViewEntityState(p)
+		}
+
 		p.checkBlockCollisions(w)
 		p.onGround.Store(p.checkOnGround(w))
 
@@ -2063,7 +2079,7 @@ func (p *Player) starve(w *world.World) {
 
 // checkCollisions checks the player's block collisions.
 func (p *Player) checkBlockCollisions(w *world.World) {
-	aabb := p.AABB().Translate(p.Position())
+	aabb := p.AABB().Translate(p.Position()).Grow(-0.0001)
 	min, max := cube.PosFromVec3(aabb.Min()), cube.PosFromVec3(aabb.Max())
 
 	for y := min[1]; y <= max[1]; y++ {
@@ -2271,6 +2287,9 @@ func (p *Player) addNewItem(ctx *item.UseContext) {
 		// Not all items could be added to the inventory, so drop the rest.
 		p.Drop(ctx.NewItem.Grow(ctx.NewItem.Count() - n))
 	}
+	if p.Dead() {
+		p.dropItems()
+	}
 }
 
 // canReach checks if a player can reach a position with its current range. The range depends on if the player
@@ -2313,6 +2332,12 @@ func (p *Player) Close() error {
 // close closes the player without disconnecting it. It executes code shared by both the closing and the
 // disconnecting of players.
 func (p *Player) close(msg string) {
+	// If the player is being disconnected while they are dead, we respawn the player
+	// so that the player logic works correctly the next time they join.
+	if p.Dead() && p.session() != nil {
+		p.Respawn()
+	}
+
 	p.sMutex.Lock()
 	s := p.s
 	p.s = nil
@@ -2323,21 +2348,15 @@ func (p *Player) close(msg string) {
 	p.h = NopHandler{}
 	p.hMutex.Unlock()
 
-	// If the player is being disconnected while they are dead, we respawn the player
-	// so that the player logic works correctly the next time they join.
-	if p.Dead() && s != nil {
-		p.Respawn()
-	}
-	h.HandleQuit()
-
-	if s == nil {
+	if s != nil {
+		s.Disconnect(msg)
+		s.CloseConnection()
+	} else {
 		// Only remove the player from the world if it's not attached to a session. If it is attached to a session, the
 		// session will remove the player once ready.
 		p.World().RemoveEntity(p)
-		return
 	}
-	s.Disconnect(msg)
-	s.CloseConnection()
+	h.HandleQuit()
 }
 
 // load reads the player data from the provider. It uses the default values if the provider
