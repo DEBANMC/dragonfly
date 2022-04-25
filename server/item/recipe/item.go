@@ -85,5 +85,9 @@ func (o outputItem) Stack() (item.Stack, bool) {
 		}
 	}
 
+	if it == nil { //kost
+		return item.Stack{}, false
+	}
+
 	return item.NewStack(it, int(o.Count)), true
 }
