@@ -2,13 +2,14 @@ package player
 
 import (
 	"fmt"
+	"github.com/df-mc/atomic"
 	"math"
 	"math/rand"
 	"net"
 	"strings"
 	"sync"
 	"time"
-
+  
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/cmd"
@@ -18,6 +19,7 @@ import (
 	"github.com/df-mc/dragonfly/server/entity/healing"
 	"github.com/df-mc/dragonfly/server/entity/physics"
 	"github.com/df-mc/dragonfly/server/event"
+	"github.com/df-mc/dragonfly/server/internal/sliceutil"
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/item/enchantment"
 	"github.com/df-mc/dragonfly/server/item/inventory"
@@ -33,7 +35,6 @@ import (
 	"github.com/df-mc/dragonfly/server/world/sound"
 	"github.com/go-gl/mathgl/mgl64"
 	"github.com/google/uuid"
-	"go.uber.org/atomic"
 	"golang.org/x/text/language"
 )
 
@@ -44,9 +45,9 @@ type Player struct {
 	uuid                                uuid.UUID
 	xuid                                string
 	locale                              language.Tag
-	pos, vel                            atomic.Value
-	nameTag                             atomic.String
-	scoreTag                            atomic.String
+	pos, vel                            atomic.Value[mgl64.Vec3]
+	nameTag                             atomic.Value[string]
+	scoreTag                            atomic.Value[string]
 	yaw, pitch, absorptionHealth, scale atomic.Float64
 	once                                sync.Once
 
@@ -84,12 +85,12 @@ type Player struct {
 	speed    atomic.Float64
 	health   *entity.HealthManager
 	effects  *entity.EffectManager
-	immunity atomic.Value
+	immunity atomic.Value[time.Time]
 
 	mc *entity.MovementComputer
 
 	breaking          atomic.Bool
-	breakingPos       atomic.Value
+	breakingPos       atomic.Value[cube.Pos]
 	lastBreakDuration time.Duration
 
 	breakParticleCounter atomic.Uint32
@@ -119,17 +120,15 @@ func New(name string, skin skin.Skin, pos mgl64.Vec3) *Player {
 		name:      name,
 		skin:      skin,
 		speed:     *atomic.NewFloat64(0.1),
-		nameTag:   *atomic.NewString(name),
+		nameTag:   *atomic.NewValue(name),
 		heldSlot:  atomic.NewUint32(0),
 		locale:    language.BritishEnglish,
 		scale:     *atomic.NewFloat64(1),
+		immunity:  *atomic.NewValue(time.Now()),
+		pos:       *atomic.NewValue(pos),
 		cooldowns: make(map[itemHash]time.Time),
+		mc:        &entity.MovementComputer{Gravity: 0.06, Drag: 0.02, DragBeforeGravity: true},
 	}
-	p.mc = &entity.MovementComputer{Gravity: 0.06, Drag: 0.02, DragBeforeGravity: true}
-	p.pos.Store(pos)
-	p.vel.Store(mgl64.Vec3{})
-	p.immunity.Store(time.Now())
-	p.breakingPos.Store(cube.Pos{})
 	return p
 }
 
@@ -198,7 +197,7 @@ func (p *Player) SetSkin(skin skin.Skin) {
 	}
 
 	ctx := event.C()
-	p.handler().HandleSkinChange(ctx, skin)
+	p.handler().HandleSkinChange(ctx, &skin)
 	ctx.Continue(func() {
 		p.skinMu.Lock()
 		p.skin = skin
@@ -233,13 +232,13 @@ func (p *Player) Handle(h Handler) {
 
 // Message sends a formatted message to the player. The message is formatted following the rules of
 // fmt.Sprintln, however the newline at the end is not written.
-func (p *Player) Message(a ...interface{}) {
+func (p *Player) Message(a ...any) {
 	p.session().SendMessage(format(a))
 }
 
 // Messagef sends a formatted message using a specific format to the player. The message is formatted
 // according to the fmt.Sprintf formatting rules.
-func (p *Player) Messagef(f string, a ...interface{}) {
+func (p *Player) Messagef(f string, a ...any) {
 	msg := fmt.Sprintf(f, a...)
 	p.session().SendMessage(msg)
 }
@@ -247,19 +246,19 @@ func (p *Player) Messagef(f string, a ...interface{}) {
 // SendPopup sends a formatted popup to the player. The popup is shown above the hotbar of the player and
 // overwrites/is overwritten by the name of the item equipped.
 // The popup is formatted following the rules of fmt.Sprintln without a newline at the end.
-func (p *Player) SendPopup(a ...interface{}) {
+func (p *Player) SendPopup(a ...any) {
 	p.session().SendPopup(format(a))
 }
 
 // SendTip sends a tip to the player. The tip is shown in the middle of the screen of the player.
 // The tip is formatted following the rules of fmt.Sprintln without a newline at the end.
-func (p *Player) SendTip(a ...interface{}) {
+func (p *Player) SendTip(a ...any) {
 	p.session().SendTip(format(a))
 }
 
 // SendJukeboxPopup sends a formatted jukebox popup to the player. This popup is shown above the hotbar of the player.
 // The popup is close to the position of an action bar message and the text has no background.
-func (p *Player) SendJukeboxPopup(a ...interface{}) {
+func (p *Player) SendJukeboxPopup(a ...any) {
 	p.session().SendJukeboxPopup(format(a))
 }
 
@@ -318,7 +317,7 @@ func (p *Player) RemoveBossBar() {
 
 // Chat writes a message in the global chat (chat.Global). The message is prefixed with the name of the
 // player and is formatted following the rules of fmt.Sprintln.
-func (p *Player) Chat(msg ...interface{}) {
+func (p *Player) Chat(msg ...any) {
 	message := format(msg)
 	ctx := event.C()
 	p.handler().HandleChat(ctx, &message)
@@ -416,7 +415,7 @@ func (p *Player) NameTag() string {
 
 // SetScoreTag changes the score tag displayed over the player in-game. The score tag is displayed under the player's
 // name tag.
-func (p *Player) SetScoreTag(a ...interface{}) {
+func (p *Player) SetScoreTag(a ...any) {
 	p.scoreTag.Store(format(a))
 	p.updateState()
 }
@@ -633,14 +632,18 @@ func (p *Player) checkTotem(source damage.Source) bool {
 func (p *Player) FinalDamageFrom(dmg float64, src damage.Source) float64 {
 	if src.ReducedByArmour() {
 		defencePoints := 0.0
+		toughness := 0.0
 		for _, it := range p.armour.Items() {
 			if a, ok := it.Item().(item.Armour); ok {
 				defencePoints += a.DefencePoints()
+				toughness += a.Toughness()
 			}
 		}
-		// Armour in Bedrock edition reduces the damage taken by 4% for every armour point that the player
-		// has, with a maximum of 4*20=80%
-		dmg -= dmg * 0.04 * defencePoints
+		// Armour in Bedrock edition reduces the damage taken by 4% for each effective armour point. Effective
+		// armour point decreases as damage increases, with 1 point lost for every 2 HP of damage. The defense
+		// reduction is decreased by the toughness armor value. Effective armour points will at minimum be 20% of
+		// armour points.
+		dmg -= dmg * 0.04 * math.Max(defencePoints*0.2, defencePoints-dmg/(2+toughness/4))
 	}
 	if res, ok := p.Effect(effect.Resistance{}); ok {
 		dmg *= effect.Resistance{}.Multiplier(src, res.Level())
@@ -681,6 +684,7 @@ func (p *Player) KnockBack(src mgl64.Vec3, force, height float64) {
 	}
 	velocity := p.Position().Sub(src)
 	velocity[1] = 0
+
 	velocity = velocity.Normalize().Mul(force)
 	velocity[1] = height
 
@@ -696,12 +700,12 @@ func (p *Player) KnockBack(src mgl64.Vec3, force, height float64) {
 
 // AttackImmune checks if the player is currently immune to entity attacks, meaning it was recently attacked.
 func (p *Player) AttackImmune() bool {
-	return p.immunity.Load().(time.Time).After(time.Now())
+	return p.immunity.Load().After(time.Now())
 }
 
 // AttackImmunity returns the duration the player is immune to entity attacks.
 func (p *Player) AttackImmunity() time.Duration {
-	return time.Until(p.immunity.Load().(time.Time))
+	return time.Until(p.immunity.Load())
 }
 
 // SetAttackImmunity sets the duration the player is immune to entity attacks.
@@ -1029,7 +1033,7 @@ func (p *Player) StopFlying() {
 	p.session().SendGameMode(p.GameMode())
 }
 
-// Jump makes the player jump if they are on ground. It exhausts the player by 0.2 food points, an additional 0.6
+// Jump makes the player jump if they are on ground. It exhausts the player by 0.05 food points, an additional 0.15
 // is exhausted if the player is sprint jumping.
 func (p *Player) Jump() {
 	if p.Dead() {
@@ -1045,9 +1049,9 @@ func (p *Player) Jump() {
 		p.vel.Store(mgl64.Vec3{0, jumpVel})
 	}
 	if p.Sprinting() {
-		p.Exhaust(0.8)
-	} else {
 		p.Exhaust(0.2)
+	} else {
+		p.Exhaust(0.05)
 	}
 }
 
@@ -1179,9 +1183,8 @@ func (p *Player) SetGameMode(mode world.GameMode) {
 // The game mode may be changed using Player.SetGameMode().
 func (p *Player) GameMode() world.GameMode {
 	p.gameModeMu.RLock()
-	mode := p.gameMode
-	p.gameModeMu.RUnlock()
-	return mode
+	defer p.gameModeMu.RUnlock()
+	return p.gameMode
 }
 
 // itemHash is used as a hash for a world.Item.
@@ -1288,12 +1291,18 @@ func (p *Player) UseItem() {
 					// The required duration for consuming this item was not met, so we don't consume it.
 					return
 				}
-				p.SetHeldItems(p.subtractItem(i, 1), left)
 
-				ctx := p.useContext()
-				ctx.NewItem = usable.Consume(w, p)
-				p.addNewItem(ctx)
-				w.PlaySound(p.Position().Add(mgl64.Vec3{0, 1.5}), sound.Burp{})
+				ctx := event.C()
+				p.handler().HandleItemConsume(ctx, i)
+
+				ctx.Continue(func() {
+					p.SetHeldItems(p.subtractItem(i, 1), left)
+
+					ctx := p.useContext()
+					ctx.NewItem = usable.Consume(w, p)
+					p.addNewItem(ctx)
+					w.PlaySound(p.Position().Add(mgl64.Vec3{0, 1.5}), sound.Burp{})
+				})
 			}
 			p.usingSince.Store(time.Now().UnixNano())
 			p.updateState()
@@ -1391,6 +1400,9 @@ func (p *Player) UsingItem() bool {
 	return p.usingItem.Load()
 }
 
+// disabledOpts holds a *world.SetOpts with all options disabled, this is typically used for resending blocks to players.
+var disabledOpts = &world.SetOpts{DisableBlockUpdates: true, DisableLiquidDisplacement: true}
+
 // UseItemOnBlock uses the item held in the main hand of the player on a block at the position passed. The
 // player is assumed to have clicked the face passed with the relative click position clickPos.
 // If the item could not be used successfully, for example when the position is out of range, the method
@@ -1406,8 +1418,8 @@ func (p *Player) UseItemOnBlock(pos cube.Pos, face cube.Face, clickPos mgl64.Vec
 		if !success {
 			// Resend both the block clicked and the one on the face of that block clicked if using the item was not
 			// successful.
-			w.SetBlock(pos, b)
-			w.SetBlock(pos.Side(face), w.Block(pos.Side(face)))
+			w.SetBlock(pos, b, disabledOpts)
+			w.SetBlock(pos.Side(face), w.Block(pos.Side(face)), disabledOpts)
 			if liq, ok := w.Liquid(pos); ok {
 				w.SetLiquid(pos, liq)
 			}
@@ -1555,6 +1567,12 @@ func (p *Player) AttackEntity(e world.Entity) {
 		}
 		if vulnerable {
 			p.Exhaust(0.1)
+
+			if k, ok := i.Enchantment(enchantment.KnockBack{}); ok {
+				inc := (enchantment.KnockBack{}).Force(k.Level())
+				force += inc
+				height += inc
+			}
 			living.KnockBack(p.Position(), force, height)
 
 			if flammable, ok := living.(entity.Flammable); ok {
@@ -1600,7 +1618,7 @@ func (p *Player) StartBreaking(pos cube.Pos, face cube.Face) {
 		return
 	}
 	if _, ok := w.Block(pos.Side(face)).(block.Fire); ok {
-		w.BreakBlockWithoutParticles(pos.Side(face))
+		w.SetBlock(pos.Side(face), nil, nil)
 		w.PlaySound(pos.Vec3(), sound.FireExtinguish{})
 		return
 	}
@@ -1669,10 +1687,10 @@ func (p *Player) breakTime(pos cube.Pos) time.Duration {
 // if the player isn't breaking anything.
 // FinishBreaking will stop the animation and break the block.
 func (p *Player) FinishBreaking() {
-	pos := p.breakingPos.Load().(cube.Pos)
+	pos := p.breakingPos.Load()
 	if !p.breaking.Load() {
 		w := p.World()
-		w.SetBlock(pos, w.Block(pos))
+		w.SetBlock(pos, w.Block(pos), disabledOpts)
 		return
 	}
 	p.AbortBreaking()
@@ -1687,7 +1705,7 @@ func (p *Player) AbortBreaking() {
 		return
 	}
 	p.breakParticleCounter.Store(0)
-	pos := p.breakingPos.Load().(cube.Pos)
+	pos := p.breakingPos.Load()
 	for _, viewer := range p.viewers() {
 		viewer.ViewBlockAction(pos, block.StopCrackAction{})
 	}
@@ -1700,7 +1718,7 @@ func (p *Player) ContinueBreaking(face cube.Face) {
 	if !p.breaking.Load() {
 		return
 	}
-	pos := p.breakingPos.Load().(cube.Pos)
+	pos := p.breakingPos.Load()
 
 	p.SwingArm()
 
@@ -1741,9 +1759,9 @@ func (p *Player) placeBlock(pos cube.Pos, b world.Block, ignoreAABB bool) (succe
 	defer func() {
 		if !success {
 			pos.Neighbours(func(neighbour cube.Pos) {
-				w.SetBlock(neighbour, w.Block(neighbour))
+				w.SetBlock(neighbour, w.Block(neighbour), disabledOpts)
 			}, w.Range())
-			w.SetBlock(pos, w.Block(pos))
+			w.SetBlock(pos, w.Block(pos), disabledOpts)
 		}
 	}()
 	if !p.canReach(pos.Vec3Centre()) || !p.GameMode().AllowsEditing() {
@@ -1756,7 +1774,7 @@ func (p *Player) placeBlock(pos cube.Pos, b world.Block, ignoreAABB bool) (succe
 	ctx := event.C()
 	p.handler().HandleBlockPlace(ctx, pos, b)
 	ctx.Continue(func() {
-		w.PlaceBlock(pos, b)
+		w.SetBlock(pos, b, nil)
 		w.PlaySound(pos.Vec3(), sound.BlockPlace{Block: b})
 		p.SwingArm()
 		success = true
@@ -1805,7 +1823,7 @@ func (p *Player) BreakBlock(pos cube.Pos) {
 	if _, breakable := b.(block.Breakable); !breakable && !p.GameMode().CreativeInventory() {
 		// Block cannot be broken server-side. Set the block back so viewers have it resent and cancel all
 		// further action.
-		w.SetBlock(pos, w.Block(pos))
+		w.SetBlock(pos, w.Block(pos), disabledOpts)
 		return
 	}
 
@@ -1816,7 +1834,8 @@ func (p *Player) BreakBlock(pos cube.Pos) {
 
 	ctx.Continue(func() {
 		p.SwingArm()
-		w.BreakBlock(pos)
+		w.SetBlock(pos, nil, nil)
+		w.AddParticle(pos.Vec3Centre(), particle.BlockBreak{Block: b})
 
 		for _, drop := range drops {
 			itemEntity := entity.NewItem(drop, pos.Vec3Centre())
@@ -1833,7 +1852,7 @@ func (p *Player) BreakBlock(pos cube.Pos) {
 		}
 	})
 	ctx.Stop(func() {
-		w.SetBlock(pos, w.Block(pos))
+		w.SetBlock(pos, w.Block(pos), disabledOpts)
 	})
 }
 
@@ -1933,15 +1952,25 @@ func (p *Player) teleport(pos mgl64.Vec3) {
 		v.ViewEntityTeleport(p, pos)
 	}
 	p.pos.Store(pos)
+	p.vel.Store(mgl64.Vec3{})
 }
 
 // Move moves the player from one position to another in the world, by adding the delta passed to the current
 // position of the player.
 // Move also rotates the player, adding deltaYaw and deltaPitch to the respective values.
 func (p *Player) Move(deltaPos mgl64.Vec3, deltaYaw, deltaPitch float64) {
-	if p.Dead() || p.immobile.Load() || (deltaPos.ApproxEqual(mgl64.Vec3{}) && mgl64.FloatEqual(deltaYaw, 0) && mgl64.FloatEqual(deltaPitch, 0)) {
+	if p.Dead() || (deltaPos.ApproxEqual(mgl64.Vec3{}) && mgl64.FloatEqual(deltaYaw, 0) && mgl64.FloatEqual(deltaPitch, 0)) {
 		return
 	}
+	if p.immobile.Load() {
+		if mgl64.FloatEqual(deltaYaw, 0) && mgl64.FloatEqual(deltaPitch, 0) {
+			// If only the position was changed, don't continue with the movement when immobile.
+			return
+		}
+		// Still update rotation if it was changed.
+		deltaPos = mgl64.Vec3{}
+	}
+
 	w := p.World()
 
 	pos := p.Position()
@@ -2002,12 +2031,12 @@ func (p *Player) World() *world.World {
 // Position returns the current position of the player. It may be changed as the player moves or is moved
 // around the world.
 func (p *Player) Position() mgl64.Vec3 {
-	return p.pos.Load().(mgl64.Vec3)
+	return p.pos.Load()
 }
 
 // Velocity returns the players current velocity. If there is an attached session, this will be empty.
 func (p *Player) Velocity() mgl64.Vec3 {
-	return p.vel.Load().(mgl64.Vec3)
+	return p.vel.Load()
 }
 
 // SetVelocity updates the player's velocity. If there is an attached session, this will just send
@@ -2299,6 +2328,12 @@ func (p *Player) PlaySound(sound world.Sound) {
 	p.session().ViewSound(entity.EyePosition(p), sound)
 }
 
+// ShowParticle shows a particle that only this Player can see. Unlike World.AddParticle, it is not broadcast
+// to players around it.
+func (p *Player) ShowParticle(pos mgl64.Vec3, particle world.Particle) {
+	p.session().ViewParticle(pos, particle)
+}
+
 // EditSign edits the sign at the cube.Pos passed and writes the text passed to a sign at that position. If no sign is
 // present or if the Player cannot edit it, an error is returned
 func (p *Player) EditSign(pos cube.Pos, text string) error {
@@ -2317,7 +2352,7 @@ func (p *Player) EditSign(pos cube.Pos, text string) error {
 	ctx.Continue(func() {
 		sign.Text = text
 	})
-	w.SetBlock(pos, sign)
+	w.SetBlock(pos, sign, nil)
 	return nil
 }
 
@@ -2429,15 +2464,15 @@ func (p *Player) canReach(pos mgl64.Vec3) bool {
 	eyes := entity.EyePosition(p)
 
 	if p.GameMode().CreativeInventory() {
-		return world.Distance(eyes, pos) <= creativeRange && !p.Dead()
+		return eyes.Sub(pos).Len() <= creativeRange && !p.Dead()
 	}
-	return world.Distance(eyes, pos) <= survivalRange && !p.Dead()
+	return eyes.Sub(pos).Len() <= survivalRange && !p.Dead()
 }
 
 // Disconnect closes the player and removes it from the world.
 // Disconnect, unlike Close, allows a custom message to be passed to show to the player when it is
 // disconnected. The message is formatted following the rules of fmt.Sprintln without a newline at the end.
-func (p *Player) Disconnect(msg ...interface{}) {
+func (p *Player) Disconnect(msg ...any) {
 	p.once.Do(func() {
 		p.close(format(msg))
 	})
@@ -2512,10 +2547,7 @@ func (p *Player) loadInventory(data InventoryData) {
 		_ = p.Inventory().SetItem(slot, stack)
 	}
 	_ = p.offHand.SetItem(0, data.OffHand)
-	p.Armour().SetBoots(data.Boots)
-	p.Armour().SetLeggings(data.Leggings)
-	p.Armour().SetChestplate(data.Chestplate)
-	p.Armour().SetHelmet(data.Helmet)
+	p.Armour().Set(data.Helmet, data.Chestplate, data.Leggings, data.Boots)
 }
 
 // Data returns the player data that needs to be saved. This is used when the player
@@ -2561,13 +2593,11 @@ func (p *Player) Data() Data {
 // is returned.
 func (p *Player) session() *session.Session {
 	p.sMutex.RLock()
-	s := p.s
-	p.sMutex.RUnlock()
-
-	if s == nil {
+	defer p.sMutex.RUnlock()
+	if p.s == nil {
 		return session.Nop
 	}
-	return s
+	return p.s
 }
 
 // useContext returns an item.UseContext initialised for a Player.
@@ -2615,9 +2645,8 @@ func (p *Player) useContext() *item.UseContext {
 // handler returns the Handler of the player.
 func (p *Player) handler() Handler {
 	p.hMutex.RLock()
-	handler := p.h
-	p.hMutex.RUnlock()
-	return handler
+	defer p.hMutex.RUnlock()
+	return p.h
 }
 
 // broadcastItems broadcasts the items held to viewers.
@@ -2637,22 +2666,16 @@ func (p *Player) broadcastArmour(int, item.Stack) {
 // viewers returns a list of all viewers of the Player.
 func (p *Player) viewers() []world.Viewer {
 	viewers := p.World().Viewers(p.Position())
-	s := p.session()
+	var s world.Viewer = p.session()
 
-	found := false
-	for _, v := range viewers {
-		if v == s {
-			found = true
-		}
-	}
-	if !found {
-		viewers = append(viewers, s)
+	if sliceutil.Index(viewers, s) == -1 {
+		return append(viewers, s)
 	}
 	return viewers
 }
 
 // format is a utility function to format a list of values to have spaces between them, but no newline at the
 // end, which is typically used for sending messages, popups and tips.
-func format(a []interface{}) string {
+func format(a []any) string {
 	return strings.TrimSuffix(strings.TrimSuffix(fmt.Sprintln(a...), "\n"), "\n")
 }

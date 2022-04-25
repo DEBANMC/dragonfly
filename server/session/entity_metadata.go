@@ -12,11 +12,11 @@ import (
 
 // entityMetadata represents a map that holds metadata associated with an entity. The data held in the map
 // depends on the entity and varies on a per-entity basis.
-type entityMetadata map[uint32]interface{}
+type entityMetadata map[uint32]any
 
 // parseEntityMetadata returns an entity metadata object with default values. It is equivalent to setting
 // all properties to their default values and disabling all flags.
-func parseEntityMetadata(e world.Entity) entityMetadata {
+func (s *Session) parseEntityMetadata(e world.Entity) entityMetadata {
 	bb := e.AABB()
 	m := entityMetadata{
 		dataKeyBoundingBoxWidth:  float32(bb.Width()),
@@ -28,22 +28,23 @@ func parseEntityMetadata(e world.Entity) entityMetadata {
 
 	m.setFlag(dataKeyFlags, dataFlagAffectedByGravity)
 	m.setFlag(dataKeyFlags, dataFlagCanClimb)
-
-	if s, ok := e.(blocking); ok && s.Blocking() {
-		m[dataKeyExtended] = int64(128)
-	} else {
-		m[dataKeyExtended] = int64(0)
-	}
-	if s, ok := e.(sneaker); ok && s.Sneaking() {
+  
+	if sn, ok := e.(sneaker); ok && sn.Sneaking() {
 		m.setFlag(dataKeyFlags, dataFlagSneaking)
+    
+    if b, ok := e.(blocking); ok && b.Blocking() {
+		  m[dataKeyExtended] = int64(128)
+	  } else {
+		  m[dataKeyExtended] = int64(0)
+	  }
 	}
-	if s, ok := e.(sprinter); ok && s.Sprinting() {
+	if sp, ok := e.(sprinter); ok && sp.Sprinting() {
 		m.setFlag(dataKeyFlags, dataFlagSprinting)
 	}
-	if s, ok := e.(swimmer); ok && s.Swimming() {
+	if sw, ok := e.(swimmer); ok && sw.Swimming() {
 		m.setFlag(dataKeyFlags, dataFlagSwimming)
 	}
-	if s, ok := e.(breather); ok && s.Breathing() {
+	if b, ok := e.(breather); ok && b.Breathing() {
 		m.setFlag(dataKeyFlags, dataFlagBreathing)
 	}
 	if i, ok := e.(invisible); ok && i.Invisible() {
@@ -61,8 +62,11 @@ func parseEntityMetadata(e world.Entity) entityMetadata {
 	if c, ok := e.(arrow); ok && c.Critical() {
 		m.setFlag(dataKeyFlags, dataFlagCritical)
 	}
-	if s, ok := e.(scaled); ok {
-		m[dataKeyScale] = float32(s.Scale())
+	if sc, ok := e.(scaled); ok {
+		m[dataKeyScale] = float32(sc.Scale())
+	}
+	if o, ok := e.(owned); ok {
+		m[dataKeyOwnerRuntimeID] = int64(s.entityRuntimeID(o.Owner()))
 	}
 	if n, ok := e.(named); ok {
 		m[dataKeyNameTag] = n.NameTag()
@@ -70,11 +74,11 @@ func parseEntityMetadata(e world.Entity) entityMetadata {
 		m.setFlag(dataKeyFlags, dataFlagAlwaysShowNameTag)
 		m.setFlag(dataKeyFlags, dataFlagCanShowNameTag)
 	}
-	if s, ok := e.(scoreTag); ok {
-		m[dataKeyScoreTag] = s.ScoreTag()
+	if sc, ok := e.(scoreTag); ok {
+		m[dataKeyScoreTag] = sc.ScoreTag()
 	}
-	if s, ok := e.(splash); ok {
-		pot := s.Type()
+	if sp, ok := e.(splash); ok {
+		pot := sp.Type()
 		m[dataKeyPotionAuxValue] = int16(pot.Uint8())
 		if len(pot.Effects()) > 0 {
 			m.setFlag(dataKeyFlags, dataFlagEnchanted)
@@ -177,6 +181,10 @@ type invisible interface {
 
 type scaled interface {
 	Scale() float64
+}
+
+type owned interface {
+	Owner() world.Entity
 }
 
 type named interface {

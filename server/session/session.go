@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/df-mc/atomic"
+
 	"io"
 	"net"
 	"sync"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/internal"
+	"github.com/df-mc/dragonfly/server/internal/sliceutil"
 	"github.com/df-mc/dragonfly/server/item/inventory"
 	"github.com/df-mc/dragonfly/server/item/recipe"
 	"github.com/df-mc/dragonfly/server/player/chat"
@@ -41,15 +44,14 @@ type Session struct {
 	// session controls.
 	onStop func(controllable Controllable)
 
-	currentScoreboard atomic.String
-	currentLines      atomic.Value
+	currentScoreboard atomic.Value[string]
+	currentLines      atomic.Value[[]string]
 
 	chunkBuf                    *bytes.Buffer
 	chunkLoader                 *world.Loader
 	chunkRadius, maxChunkRadius int32
 
-	teleportMu  sync.Mutex
-	teleportPos *mgl64.Vec3
+	teleportPos atomic.Value[*mgl64.Vec3]
 
 	entityMutex sync.RWMutex
 	// currentEntityRuntimeID holds the runtime ID assigned to the last entity. It is incremented for every
@@ -69,8 +71,12 @@ type Session struct {
 
 	openedWindowID                 atomic.Uint32
 	inTransaction, containerOpened atomic.Bool
-	openedWindow, openedPos        atomic.Value
+
+	openedWindow                   atomic.Value[*inventory.Inventory]
+	openedPos                      atomic.Value[cube.Pos]
+
 	openedContainerID              atomic.Uint32
+
 	swingingArm                    atomic.Bool
 
 	recipeMapping map[uint32]recipe.Recipe
@@ -80,7 +86,7 @@ type Session struct {
 	openChunkTransactions []map[uint64]struct{}
 	invOpened             bool
 
-	joinMessage, quitMessage *atomic.String
+	joinMessage, quitMessage *atomic.Value[string]
 
 	closeBackground chan struct{}
 }
@@ -134,7 +140,7 @@ var ErrSelfRuntimeID = errors.New("invalid entity runtime ID: runtime ID for sel
 // packets that it receives.
 // New takes the connection from which to accept packets. It will start handling these packets after a call to
 // Session.Start().
-func New(conn Conn, maxChunkRadius int, log internal.Logger, joinMessage, quitMessage *atomic.String) *Session {
+func New(conn Conn, maxChunkRadius int, log internal.Logger, joinMessage, quitMessage *atomic.Value[string]) *Session {
 	r := conn.ChunkRadius()
 	if r > maxChunkRadius {
 		r = maxChunkRadius
@@ -367,12 +373,7 @@ func (s *Session) sendChunks() {
 	if toLoad > 4 {
 		toLoad = 4
 	}
-	if err := s.chunkLoader.Load(toLoad); err != nil {
-		// The world was closed. This should generally never happen, and if it does, we can assume the
-		// world was closed.
-		s.log.Debugf("error loading chunk: %v", err)
-		return
-	}
+	s.chunkLoader.Load(toLoad)
 }
 
 // handleWorldSwitch handles the player of the Session switching worlds.
@@ -473,15 +474,11 @@ func (s *Session) initPlayerList() {
 // other sessions.
 func (s *Session) closePlayerList() {
 	sessionMu.Lock()
-	n := make([]*Session, 0, len(sessions)-1)
 	for _, session := range sessions {
-		if session != s {
-			n = append(n, session)
-		}
 		// Remove the player of the session from the player list of all other sessions.
 		session.removeFromPlayerList(s)
 	}
-	sessions = n
+	sessions = sliceutil.DeleteVal(sessions, s)
 	sessionMu.Unlock()
 }
 
@@ -499,7 +496,7 @@ func (s *Session) sendAvailableEntities() {
 		id := entity.EncodeEntity()
 		entityData = append(entityData, actorIdentifier{ID: id})
 	}
-	serializedEntityData, err := nbt.Marshal(map[string]interface{}{"idlist": entityData})
+	serializedEntityData, err := nbt.Marshal(map[string]any{"idlist": entityData})
 	if err != nil {
 		panic(fmt.Errorf("failed to serialize entity data: %v", err))
 	}

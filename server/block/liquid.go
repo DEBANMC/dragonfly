@@ -141,7 +141,7 @@ func flowInto(b world.Liquid, src, pos cube.Pos, w *world.World, falling bool) b
 		return false
 	}
 	if _, air := existing.(Air); !air {
-		w.BreakBlockWithoutParticles(pos)
+		w.SetBlock(pos, nil, nil)
 	}
 	if removable.HasLiquidDrops() {
 		if b, ok := existing.(Breakable); ok {
@@ -306,7 +306,7 @@ func (node liquidNode) Path(src cube.Pos) liquidPath {
 
 // liquidQueuePool is use to re-use liquid node queues.
 var liquidQueuePool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &liquidQueue{
 			nodes:        make([]liquidNode, 0, 64),
 			shortestPath: math.MaxInt8,
