@@ -6,10 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"github.com/df-mc/atomic"
+
+	"io"
+	"net"
+	"sync"
+	"time"
+
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/internal"
 	"github.com/df-mc/dragonfly/server/internal/sliceutil"
 	"github.com/df-mc/dragonfly/server/item/inventory"
+	"github.com/df-mc/dragonfly/server/item/recipe"
 	"github.com/df-mc/dragonfly/server/player/chat"
 	"github.com/df-mc/dragonfly/server/player/form"
 	"github.com/df-mc/dragonfly/server/world"
@@ -20,10 +27,7 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
-	"io"
-	"net"
-	"sync"
-	"time"
+	"go.uber.org/atomic"
 )
 
 // Session handles incoming packets from connections and sends outgoing packets by providing a thin layer
@@ -67,9 +71,15 @@ type Session struct {
 
 	openedWindowID                 atomic.Uint32
 	inTransaction, containerOpened atomic.Bool
+
 	openedWindow                   atomic.Value[*inventory.Inventory]
 	openedPos                      atomic.Value[cube.Pos]
+
+	openedContainerID              atomic.Uint32
+
 	swingingArm                    atomic.Bool
+
+	recipeMapping map[uint32]recipe.Recipe
 
 	blobMu                sync.Mutex
 	blobs                 map[uint64][]byte
@@ -171,6 +181,7 @@ func New(conn Conn, maxChunkRadius int, log internal.Logger, joinMessage, quitMe
 func (s *Session) Start(c Controllable, w *world.World, gm world.GameMode, onStop func(controllable Controllable)) {
 	s.onStop = onStop
 	s.c = c
+	s.recipeMapping = make(map[uint32]recipe.Recipe)
 	s.entityRuntimeIDs[c] = selfEntityRuntimeID
 	s.entities[selfEntityRuntimeID] = c
 
@@ -202,6 +213,8 @@ func (s *Session) Start(c Controllable, w *world.World, gm world.GameMode, onSto
 	s.sendInv(s.ui, protocol.WindowIDUI)
 	s.sendInv(s.offHand, protocol.WindowIDOffHand)
 	s.sendInv(s.armour.Inventory(), protocol.WindowIDArmour)
+	s.sendRecipes()
+
 	s.writePacket(&packet.CreativeContent{Items: creativeItems()})
 
 	go s.handlePackets()
@@ -305,6 +318,7 @@ func (s *Session) background() {
 		ok                bool
 		i                 int
 	)
+
 	defer t.Stop()
 
 	for {
@@ -327,6 +341,21 @@ func (s *Session) background() {
 			return
 		}
 	}
+}
+
+func (s *Session) craftingSize() byte {
+	if s.openedContainerID.Load() == 1 {
+		return craftingSizeLarge
+	}
+	return craftingSizeSmall
+}
+
+// craftingOffset gets the crafting offset based on the opened container ID.
+func (s *Session) craftingOffset() byte {
+	if s.openedContainerID.Load() == 1 {
+		return craftingGridLargeOffset
+	}
+	return craftingGridSmallOffset
 }
 
 // sendChunks sends the next up to 4 chunks to the connection. What chunks are loaded depends on the connection of
@@ -398,11 +427,12 @@ func (s *Session) registerHandlers() {
 		packet.IDClientCacheBlobStatus: &ClientCacheBlobStatusHandler{},
 		packet.IDCommandRequest:        &CommandRequestHandler{},
 		packet.IDContainerClose:        &ContainerCloseHandler{},
+		packet.IDCraftingEvent:         nil, // Not needed as we handle ItemStackRequest actions instead.
 		packet.IDEmote:                 &EmoteHandler{},
 		packet.IDEmoteList:             nil,
 		packet.IDInteract:              &InteractHandler{},
 		packet.IDInventoryTransaction:  &InventoryTransactionHandler{},
-		packet.IDItemStackRequest:      &ItemStackRequestHandler{changes: make(map[byte]map[byte]changeInfo), responseChanges: map[int32]map[byte]map[byte]responseChange{}},
+		packet.IDItemStackRequest:      &ItemStackRequestHandler{changes: make(map[byte]map[byte]changeInfo), responseChanges: map[int32]map[*inventory.Inventory]map[byte]responseChange{}},
 		packet.IDLevelSoundEvent:       &LevelSoundEventHandler{},
 		packet.IDMobEquipment:          &MobEquipmentHandler{},
 		packet.IDModalFormResponse:     &ModalFormResponseHandler{forms: make(map[uint32]form.Form)},

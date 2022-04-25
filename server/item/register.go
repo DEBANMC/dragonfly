@@ -148,4 +148,7 @@ func init() {
 	}
 	world.RegisterItem(TropicalFish{})
 	world.RegisterItem(AmethystShard{})
+
+	world.RegisterItem(Totem{})
+	world.RegisterItem(Shield{})
 }

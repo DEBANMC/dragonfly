@@ -50,6 +50,7 @@ type Controllable interface {
 
 	StartSneaking()
 	Sneaking() bool
+	Blocking() bool
 	StopSneaking()
 	StartSprinting()
 	Sprinting() bool

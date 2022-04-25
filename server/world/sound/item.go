@@ -50,3 +50,5 @@ type UseSpyglass struct{ sound }
 
 // StopUsingSpyglass is a sound played when a player stops using a spyglass.
 type StopUsingSpyglass struct{ sound }
+
+type TotemUsed struct{ sound }

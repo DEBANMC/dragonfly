@@ -1,12 +1,13 @@
 package session
 
 import (
+	"image/color"
+	"time"
+
 	"github.com/df-mc/dragonfly/server/entity/effect"
 	"github.com/df-mc/dragonfly/server/internal/nbtconv"
 	"github.com/df-mc/dragonfly/server/item/potion"
 	"github.com/df-mc/dragonfly/server/world"
-	"image/color"
-	"time"
 )
 
 // entityMetadata represents a map that holds metadata associated with an entity. The data held in the map
@@ -27,8 +28,15 @@ func (s *Session) parseEntityMetadata(e world.Entity) entityMetadata {
 
 	m.setFlag(dataKeyFlags, dataFlagAffectedByGravity)
 	m.setFlag(dataKeyFlags, dataFlagCanClimb)
+  
 	if sn, ok := e.(sneaker); ok && sn.Sneaking() {
 		m.setFlag(dataKeyFlags, dataFlagSneaking)
+    
+    if b, ok := e.(blocking); ok && b.Blocking() {
+		  m[dataKeyExtended] = int64(128)
+	  } else {
+		  m[dataKeyExtended] = int64(0)
+	  }
 	}
 	if sp, ok := e.(sprinter); ok && sp.Sprinting() {
 		m.setFlag(dataKeyFlags, dataFlagSprinting)
@@ -124,6 +132,7 @@ const (
 	dataKeyBoundingBoxHeight = 54
 	dataKeyAlwaysShowNameTag = 81
 	dataKeyScoreTag          = 84
+	dataKeyExtended          = 92
 )
 
 //noinspection GoUnusedConst
@@ -143,6 +152,7 @@ const (
 	dataFlagAffectedByGravity = 48
 	dataFlagEnchanted         = 51
 	dataFlagSwimming          = 56
+	dataFlagBlocking          = 71
 )
 
 type sneaker interface {
@@ -207,4 +217,8 @@ type using interface {
 
 type arrow interface {
 	Critical() bool
+}
+
+type blocking interface {
+	Blocking() bool
 }

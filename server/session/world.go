@@ -2,6 +2,8 @@ package session
 
 import (
 	"bytes"
+	"math/rand"
+
 	"github.com/cespare/xxhash"
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
@@ -19,7 +21,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/nbt"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"math/rand"
 )
 
 // ViewChunk ...
@@ -488,6 +489,12 @@ func (s *Session) ViewSound(pos mgl64.Vec3, soundType world.Sound) {
 			Position:  vec64To32(pos),
 		})
 		return
+	case sound.TotemUsed:
+		s.writePacket(&packet.LevelEvent{
+			EventType: packet.LevelEventSoundTotemUsed,
+			Position:  vec64To32(pos),
+		})
+		return
 	case sound.ItemFrameAdd:
 		s.writePacket(&packet.LevelEvent{
 			EventType: packet.LevelEventSoundAddItem,
@@ -687,9 +694,13 @@ func (s *Session) OpenBlockContainer(pos cube.Pos) {
 
 	var containerType byte
 	switch b.(type) {
+	case block.CraftingTable:
+		containerType = 1
 	case block.Beacon:
 		containerType = 13
 	}
+	s.openedContainerID.Store(uint32(containerType))
+
 	s.writePacket(&packet.ContainerOpen{
 		WindowID:                nextID,
 		ContainerType:           containerType,
@@ -836,6 +847,7 @@ func (s *Session) closeWindow() {
 	if !s.containerOpened.CAS(true, false) {
 		return
 	}
+	s.openedContainerID.Store(0)
 	s.openedWindow.Store(inventory.New(1, nil))
 	s.writePacket(&packet.ContainerClose{WindowID: byte(s.openedWindowID.Load())})
 }
