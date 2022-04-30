@@ -339,7 +339,7 @@ func (p *Player) ExecuteCommand(commandLine string) {
 	command, ok := cmd.ByAlias(commandName)
 	if !ok {
 		output := &cmd.Output{}
-		output.Errorf("Unknown command '%v'", commandName)
+		output.Errorf("Unknown command: %v. Please check that the command exists and that you have permission to use it.", commandName)
 		p.SendCommandOutput(output)
 		return
 	}
