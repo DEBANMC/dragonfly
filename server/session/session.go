@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/df-mc/atomic"
 
 	"io"
@@ -27,7 +28,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
-	"go.uber.org/atomic"
 )
 
 // Session handles incoming packets from connections and sends outgoing packets by providing a thin layer
@@ -72,12 +72,12 @@ type Session struct {
 	openedWindowID                 atomic.Uint32
 	inTransaction, containerOpened atomic.Bool
 
-	openedWindow                   atomic.Value[*inventory.Inventory]
-	openedPos                      atomic.Value[cube.Pos]
+	openedWindow atomic.Value[*inventory.Inventory]
+	openedPos    atomic.Value[cube.Pos]
 
-	openedContainerID              atomic.Uint32
+	openedContainerID atomic.Uint32
 
-	swingingArm                    atomic.Bool
+	swingingArm atomic.Bool
 
 	recipeMapping map[uint32]recipe.Recipe
 
